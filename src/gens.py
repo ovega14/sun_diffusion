@@ -4,22 +4,22 @@ import numpy as np
 
 
 _su2_gens = {
-    '0': np.array([
-        [1., 0.],
-        [0., 1.]]),
-    '1': np.array([
-        [0., 1.],
-        [1., 0.]]),
-    '2': np.array([
+    '0': 1j * np.array([
+        [-1j, 0.],
+        [0., -1j]]),
+    '1': 1j * np.array([
         [0., -1j],
-        [1j, 0.]]),
-    '3': np.array([
-        [1., 0.],
-        [0., -1.]])
+        [-1j, 0.]]),
+    '2': 1j * np.array([
+        [0., -1.],
+        [1., 0.]]),
+    '3': 1j * np.array([
+        [-1j, 0.],
+        [0., 1j]])
 }
 
 
-def pauli(i) -> torch.Tensor:
+def pauli(i: int) -> torch.Tensor:
     """
     Retrieves the ith Pauli matrix as a PyTorch tensor.
 

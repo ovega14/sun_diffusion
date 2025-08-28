@@ -82,3 +82,38 @@ def _test_random_sun_element():
 
 
 if __name__ == '__main__': _test_random_sun_element()
+
+
+def inner_prod(U, V):
+    r"""
+    Computes the inner product between two SU(N) Lie
+    algebra-valued matrices `U` and `V`. Defines as
+
+    .. math::
+
+        \langle U, V \rangle := {\rm Tr}(U^\dagger V)
+
+    Args:
+        U: Square, hermitian matrix
+        V: Square, hermitian matrix
+
+    Returns:
+        Inner product between `U` and `V` as a real scalar
+    """
+    return trace(adjoint(U) @ V)
+
+
+def _test_inner_prod():
+    print('[Testing inner_prod]')
+    from gens import pauli
+
+    for i in range(1, 4):
+        pauli_i = pauli(i)
+        for j in range(1, 4):
+            pauli_j = pauli(j)
+            assert torch.allclose(inner_prod(pauli_i, pauli_j), torch.tensor([i == j], dtype=pauli_j.dtype)), \
+                f'[FAILED: pauli {i} not orthonormal to pauli {j}]'
+    print('[PASSED]')
+
+
+if __name__ == '__main__': _test_inner_prod()
