@@ -10,6 +10,7 @@ from typing import Optional
 __all__ = [
     'trace',
     'transpose',
+    'adjoint'
 ]
 
 
@@ -70,3 +71,21 @@ def transpose(
         return np.swapaxes(mtrx, dim1, dim2)
     else:
         raise TypeError(f'Unsupported type {type(mtrx).__name__}')
+
+
+def adjoint(U):
+    r"""
+    Computes the Hermitian adjoint of a complex-valued matrix `U`, which is
+    defined mathematically defined as the complex conjugate transpose:
+
+    .. math::
+
+        U^\dagger = (U^*)^\top
+
+    Args:
+        U (Tensor, NDArray): Complex matrix
+
+    Returns:
+        Hermitian adjoint of `U`
+    """
+    return transpose(U).conj()
