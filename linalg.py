@@ -7,6 +7,12 @@ from numpy.typing import NDArray
 from typing import Optional
 
 
+__all__ = [
+    'trace',
+    'transpose',
+]
+
+
 def trace(
     mtrx: Tensor | NDArray,
     dim1: Optional[int] = -1,
@@ -39,3 +45,28 @@ def trace(
         raise TypeError(f'Unsupported type {type(mtrx).__name__}')
 
     return diag.sum(-1)
+
+
+def transpose(
+    mtrx: Tensor | NDArray,
+    dim1: Optional[int] = -1,
+    dim2: Optional[int] = -2
+) -> Tensor | NDArray:
+    """
+    Transposes a matrix `mtrx` by swapping a chosen pair of dimensions given by
+    `(dim1, dim2)`.
+
+    Args:
+        mtrx (Tensor, NDArray): Matrix to transpose
+        dim1 (int): First dimension in transpose pair
+        dim2 (int): Dimension to swap with `dim1`
+
+    Returns:
+        Transposed matrix
+    """
+    if isinstance(mtrx, torch.Tensor):
+        return torch.transpose(mtrx, dim1, dim2)
+    elif isinstance(mtrx, np.ndarray):
+        return np.swapaxes(mtrx, dim1, dim2)
+    else:
+        raise TypeError(f'Unsupported type {type(mtrx).__name__}')
