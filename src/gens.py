@@ -3,6 +3,11 @@ import torch
 import numpy as np
 
 
+__all__ = [
+    'pauli'
+]
+
+
 _su2_gens = {
     '0': 1j * np.array([
         [-1j, 0.],

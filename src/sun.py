@@ -5,7 +5,8 @@ from linalg import trace, adjoint
 
 __all__ = [
     'proj_to_algebra',
-    'random_sun_element'
+    'random_sun_element',
+    'inner_prod'
 ]
 
 
