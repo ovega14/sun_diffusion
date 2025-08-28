@@ -3,6 +3,12 @@ import torch
 from linalg import trace, adjoint
 
 
+__all__ = [
+    'proj_to_algebra',
+    'random_sun_element'
+]
+
+
 def proj_to_algebra(A):
     """
     Projects a complex-valued matrix `A` into the Lie algebra
@@ -39,3 +45,40 @@ def _test_proj_to_algebra():
 
 
 if __name__ == '__main__': _test_proj_to_algebra()
+
+
+def random_sun_element(batch_size: int, *, Nc: int) -> torch.Tensor:
+    """
+    Creates a random element of SU(N) whose elements are
+    randomly sampled from a standard normal distribution.
+
+    Args:
+        batch_size (int): Number of samples to generate
+        Nc (int): Matrix dimension
+
+    Returns:
+        Random SU(N) matrices as PyTorch tensors
+    """
+    A_re = torch.randn((batch_size, Nc, Nc))
+    A_im = torch.randn((batch_size, Nc, Nc))
+    A = A_re + 1j * A_im
+    A = proj_to_algebra(A)
+    return torch.matrix_exp(1j * A)
+
+
+def _test_random_sun_element():
+    print('[Testing random_sun_element]')
+    batch_size = 5
+    Nc = 2
+    U = random_sun_element(batch_size, Nc=Nc)
+
+    detU = torch.linalg.det(U)
+    assert torch.allclose(detU, torch.ones_like(detU)), \
+        '[FAILED: matrix determinant not unity]'
+    I = torch.eye(Nc, dtype=U.dtype).repeat(batch_size, 1, 1)
+    assert torch.allclose(adjoint(U) @ U, I, atol=1e-6), \
+        '[FAILED: matrix not unitary]'
+    print('[PASSED]')
+
+
+if __name__ == '__main__': _test_random_sun_element()
