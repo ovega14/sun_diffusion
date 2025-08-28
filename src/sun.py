@@ -107,9 +107,9 @@ def _test_inner_prod():
     print('[Testing inner_prod]')
     from gens import pauli
 
-    for i in range(1, 4):
+    for i in range(4):
         pauli_i = pauli(i)
-        for j in range(1, 4):
+        for j in range(4):
             pauli_j = pauli(j)
             assert torch.allclose(inner_prod(pauli_i, pauli_j), torch.tensor([i == j], dtype=pauli_j.dtype)), \
                 f'[FAILED: pauli {i} not orthonormal to pauli {j}]'
