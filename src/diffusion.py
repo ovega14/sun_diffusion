@@ -23,7 +23,7 @@ class DiffusionProcess(torch.nn.Module, ABC):
 
     def forward(self, x_0, t):
         """Noises input data samples `x_0` to the noise level at time `t`."""
-        return self.diffuse(x, t)
+        return self.diffuse(x_0, t)
 
     @torch.no_grad()
     def reverse(self, x_1):
