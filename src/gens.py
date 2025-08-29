@@ -8,6 +8,12 @@ __all__ = [
 ]
 
 
+if __name__ == '__main__':
+    from devices import set_device, summary
+    set_device('cpu')
+    print(summary())
+
+
 _su2_gens = {
     '0': 1j * np.array([
         [-1j, 0.],
