@@ -1,6 +1,7 @@
 """Utils for group/algbra operations with and between SU(N) variables."""
 import torch
 from linalg import trace, adjoint
+from gens import pauli
 
 
 __all__ = [
@@ -10,6 +11,13 @@ __all__ = [
     'matrix_exp',
     'matrix_log'
 ]
+
+
+# Set device for tests
+if __name__ == '__main__':
+    from devices import set_device, summary
+    set_device('cpu')  # TODO: test group_to_coeffs failing on cuda
+    print(summary())
 
 
 def proj_to_algebra(A):
@@ -132,3 +140,41 @@ def matrix_log(U):
     D, V = torch.linalg.eig(U)
     logD = torch.diag_embed(torch.log(D))
     return -1j * (V @ logD @ adjoint(V))
+
+
+def group_to_coeffs(U):
+    """
+    Decomposes an SU(N) group element into the coefficients
+    on the generators in the algebra su(N).
+
+    Args:
+        U: Batch of SU(N) matrices
+
+    Returns:
+        Batch of N^2 - 1 generator coefficients
+    """
+    if U.size(-1) != 2:
+        raise NotImplementedError('Only implemented for SU(2) so far')
+    logU = matrix_log(U)
+    print('logU dtype:', logU.dtype)
+    coeffs = []
+    for i in range(1, 4):
+        print('pauli_i dtype:', pauli(i).dtype)
+        coeffs.append(inner_prod(pauli(i), logU))
+    return torch.stack(coeffs, dim=-1)
+
+
+def _test_group2coeffs():
+    print('[Testing group_to_coeffs]')
+    batch_size = 1
+    Nc = 2
+    U = random_sun_element(batch_size, Nc=Nc)
+    coeffs = group_to_coeffs(U)
+    assert coeffs.shape == (batch_size, Nc**2 - 1), \
+        '[FAILED: incorrect output shape]'
+    assert torch.allclose(coeffs.imag, torch.zeros((batch_size, Nc**2 - 1)), atol=1e-5), \
+        '[FAILED: generator coefficients should be real]'
+    print('[PASSED]')
+
+
+if __name__ == '__main__': _test_group2coeffs()
