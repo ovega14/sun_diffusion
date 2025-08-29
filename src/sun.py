@@ -6,7 +6,9 @@ from linalg import trace, adjoint
 __all__ = [
     'proj_to_algebra',
     'random_sun_element',
-    'inner_prod'
+    'inner_prod',
+    'matrix_exp',
+    'matrix_log'
 ]
 
 
@@ -118,3 +120,15 @@ def _test_inner_prod():
 
 
 if __name__ == '__main__': _test_inner_prod()
+
+
+def matrix_exp(A):
+    """Applies the exponential map to a matrix `A`."""
+    return torch.matrix_exp(1j * A)
+
+
+def matrix_log(U):
+    """Computes the matrix logarithm on an input matrix `U`."""
+    D, V = torch.linalg.eig(U)
+    logD = torch.diag_embed(torch.log(D))
+    return -1j * (V @ logD @ adjoint(V))
