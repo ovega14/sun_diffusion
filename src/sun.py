@@ -216,4 +216,4 @@ def _test_coeffs2group():
     print('[PASSED]')
 
 
-_test_coeffs2group()
+if __name__ == '__main__': _test_coeffs2group()
