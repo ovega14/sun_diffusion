@@ -156,10 +156,10 @@ def group_to_coeffs(U):
     if U.size(-1) != 2:
         raise NotImplementedError('Only implemented for SU(2) so far')
     logU = matrix_log(U)
-    print('logU dtype:', logU.dtype)
+    #print('logU dtype:', logU.dtype)
     coeffs = []
     for i in range(1, 4):
-        print('pauli_i dtype:', pauli(i).dtype)
+        #print('pauli_i dtype:', pauli(i).dtype)
         coeffs.append(inner_prod(pauli(i), logU))
     return torch.stack(coeffs, dim=-1)
 
@@ -178,3 +178,42 @@ def _test_group2coeffs():
 
 
 if __name__ == '__main__': _test_group2coeffs()
+
+
+def coeffs_to_group(coeffs):
+    """
+    Recomposes an SU(N) group element given the 
+    coefficients of the generators in the Lie algebra su(N)
+    by forming the linear combination with the group generators.
+
+    Args:
+        coeffs: Batch of N^2 - 1 generator coefficients
+
+    Returns:
+        Batch of SU(N) group elements
+    """
+    if coeffs.size(-1) != 3:  # N^2 - 1 = 3 for SU(2)
+        raise NotImplementedError('Only implemented for SU(2) so far')
+    paulis = torch.stack([pauli(i) for i in range(1, 4)], dim=-1)  # [2, 2, 3]
+    A = torch.einsum('bg, ijg -> bij', coeffs.to(dtype=paulis.dtype), paulis)
+    A = proj_to_algebra(A)
+    return matrix_exp(A)
+
+
+def _test_coeffs2group():
+    print('[Testing coeffs_to_group]')
+    batch_size = 1
+    Nc = 2
+    coeffs = torch.randn((batch_size, Nc**2 - 1))
+    U = coeffs_to_group(coeffs)
+    assert U.shape == (batch_size, Nc, Nc), \
+        '[FAILED: incorrect output shape]'
+    I =  torch.eye(Nc, dtype=U.dtype).repeat(batch_size, 1, 1)
+    assert torch.allclose(U @ adjoint(U), I, atol=1e-6), \
+        '[FAILED: result not unitary]'
+    assert torch.allclose(torch.linalg.det(U), torch.ones((batch_size,), dtype=U.dtype)), \
+        '[FAILED: result does not have unit determinant]'
+    print('[PASSED]')
+
+
+_test_coeffs2group()
