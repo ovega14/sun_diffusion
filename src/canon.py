@@ -74,3 +74,13 @@ def canonicalize_su3(thW):
     kappa = torch.stack([a, b, c], dim=0)
 
     return torch.transpose(U @ kappa, 0, 1).reshape(thW.shape)
+
+
+def canonicalize_sun(thW):
+    Nc = thW.shape[-1]
+    if Nc == 2:
+        return canonicalize_su2(thW)
+    elif Nc == 3:
+        return canonicalize_su3(thW)
+    else:
+        raise NotImplementedError(f'{Nc =} not supported')
