@@ -13,23 +13,6 @@ _default_dtype = torch.float32  # for real tensors
 _default_complex_dtype = torch.complex64  # default on GPU; complex128 on CPU
 
 
-def grab(x: Tensor | Any) -> NDArray | Any:
-    """
-    Detaches a `torch.Tensor` from the computational graph and loads it into 
-    the CPU memory as a numpy `NDArray`. Otherwise returns the input as is.
-
-    Args: 
-        x (Tensor): PyTorch tensor to be detached
-
-    Returns:
-        (NDArray) Detached NumPy array
-    """
-    if hasattr(x, 'detach'):
-        return x.detach().cpu().numpy()
-    else:
-        return x
-
-
 def set_device(device: Optional[str] = None, cuda_id: Optional[int]  = 0) -> None:
     """
     Set global device and default dtype for torch.
