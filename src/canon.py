@@ -1,6 +1,13 @@
 from utils import wrap
 
 
+__all__ = [
+    'canonicalize_su2',
+    'canonicalize_su3',
+    'canonicalize_sun'
+]
+
+
 def canonicalize_su2(thW):
     """
     Canonicalizes a set of SU(2) eigenangles :math:`(\theta_1, \theta_2)` by
