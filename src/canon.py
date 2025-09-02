@@ -79,7 +79,6 @@ def canonicalize_su3(thW):
     c -= torch.round(c - (a + b)/2))
 
     kappa = torch.stack([a, b, c], dim=0)
-
     return torch.transpose(U @ kappa, 0, 1).reshape(thW.shape)
 
 
