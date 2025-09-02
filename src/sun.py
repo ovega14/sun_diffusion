@@ -1,5 +1,7 @@
 """Utils for group/algbra operations with and between SU(N) variables."""
 import torch
+from torch import Tensor
+
 from linalg import trace, adjoint
 from gens import pauli
 
@@ -20,7 +22,7 @@ if __name__ == '__main__':
     print(summary())
 
 
-def proj_to_algebra(A):
+def proj_to_algebra(A: Tensor) -> Tensor:
     """
     Projects a complex-valued matrix `A` into the Lie algebra
     of the group :math:`{\rm SU}(N_c)` by converting it into
@@ -217,3 +219,22 @@ def _test_coeffs2group():
 
 
 if __name__ == '__main__': _test_coeffs2group()
+
+
+def mat_angle(U: Tensor) -> tuple[Tensor, Tensor, Tensor]:
+    """
+    Eigen-decomposes an input matrix `U` and retrives
+    its eigenangles and eigenvectors.
+
+    Args:
+        U (Tensor): Input matrix to decompose
+
+    Returns:
+        th (Tensor): Eigengangles
+        V (Tensor): Matrix of eigenvectors
+        Vinv (Tensor): Inverse of matrix of eigenvectors
+    """
+    L, V = torch.linalg.eig(U)
+    Vinv = torch.linalg.inv(V)
+    th = torch.angle(L)
+    return th, V, Vinv
