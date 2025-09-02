@@ -11,6 +11,8 @@ import itertools
 from torch import Tensor
 from typing import Optional
 
+from utils import grab
+
 
 # =======================================================================
 #  Euclidean Heat Kernel
@@ -188,3 +190,49 @@ def _test_sun_score_hk():
 
 
 if __name__ == '__main__': _test_sun_score_hk()
+
+
+def sample_sun_hk(
+    batch_size: int,
+    Nc: int,
+    *,
+    width: float,
+    n_iter: Optional[int] = 3,
+    n_max: Optional[int] = 3
+):
+    """
+    Generated `batch_size` many samples from the SU(Nc) heat
+    kernel of width `width` using importance sampling by
+
+        1.) Sampling eigenangles with `n_iter` iterations of IS
+        2.) Sample random eigenvectors and recomposing with eigenvals
+
+    Args:
+        batch_size (int): Number of samples to generate
+        Nc (int): Dimension of fundamental rep. of SU(Nc)
+        width (float) Standard deviation of heat kernel
+        n_iter (int): Number of IS iterations
+        n_max (int): Max number o terms to include in HK pre-image sum
+    """
+    def propose():
+        """Samples proposal eigenangles from uniform dist."""
+        xs = 2*np.pi*np.random.random(size=(batch_size, Nc))
+        xs[...,-1] = -np.sum(xs[...,:-1])
+        return grab(canonicalize_sun(torch.tensor(xs)))
+    
+    # Sample eigenangles
+    xs = propose()
+    for i in range(n_iter):
+        xps = propose()
+        # ratio b/w new, old points
+        p = sun_hk(xps[..., :-1], sigma=sigma, n_max=n_max)
+        p /= sun_hk(xs[..., :-1], sigma=sigma, n_max=n_max)
+        u = np.random.random(size=p.shape)
+        xs[u < p] = xps[u < p]  # accept / reject step
+
+    # Sample eigenvectors
+    V, _ = np.linalg.qr(np.random.randn(batch_size, Nc, Nc) + 1j * np.random.randn(batch_size, Nc, Nc))
+    D = np.identity(xs.shape[-1]) * xs[...,None]  # embed diagonal
+    A = V @ D @ adjoint(V)
+    
+    return xs, A
