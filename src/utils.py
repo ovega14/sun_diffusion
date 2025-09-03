@@ -52,7 +52,6 @@ def _test_wrap():
 if __name__ == '__main__': _test_wrap()
 
 
-
 def roll(
     x: NDArray | Tensor,
     shifts: int | tuple[int, ...],
