@@ -2,7 +2,8 @@
 import torch
 
 from linalg import trace, adjoint
-from sun import random_sun_element
+from sun import random_sun_element, random_sun_lattice
+from utils import roll
 
 
 __all__ = [
@@ -55,3 +56,63 @@ def _test_toy_action():
     
 
 if __name__ == '__main__': _test_toy_action()
+
+
+class SUNPrincipalChiralAction:
+    """
+    Action for the SU(N) x SU(N) Principle Chiral model
+    on the lattice.
+
+    This theory enjoys two noteworthy symmetries:
+        - local charge conjugation invariance: U(x) -> U^dagger(x)
+        - global left-right multiplication invariance: U(x) -> V_L(X) U(X) V_R^dagger(X)
+
+    Args:
+        beta (float): Inverse temperature parameter, equal to 1 / (Nc * T)
+    """
+    def __init__(self, beta: float):
+        self.__beta = beta
+
+    @property
+    def beta(self) -> float:
+        return self.__beta
+
+    def __call__(self, U):
+        Nc = U.shape[-1]
+        Nd = len(U.shape) - 3
+        assert Nd == 2, 'Only implemented for Nd = 2 so far'
+
+        action_density = 0
+        for mu in range(Nd):
+            action_density += trace(adjoint(U) @ roll(U, -1, mu+1)).real
+
+        dims = tuple(range(1, Nd + 1))
+        return -self.beta * Nc * action_density.sum(dims)
+
+
+def _test_pcm_action():
+    print('[Testing SUNPrincipalChiralAction]')
+    batch_size = 5
+    Nc = 2
+    lattice_shape = (4, 4)
+    U = random_sun_lattice((batch_size, *lattice_shape), Nc=Nc)
+
+    beta = 1.0
+    action = SUNPrincipalChiralAction(beta)
+    S = action(U)
+
+    # Charge conjugation symmetry
+    S_adj = action(adjoint(U))
+    assert torch.allclose(S, S_adj), \
+        '[FAILED: action should be invariant under charge conj parity]'
+
+    # Global SU(N)_L x SU(N)_R symmetry
+    V_L = random_sun_lattice((1, 1, 1), Nc=2)
+    V_R = random_sun_lattice((1, 1, 1), Nc=2)
+    S_lr = action(V_L @ U @ adjoint(V_R))
+    assert torch.allclose(S, S_lr), \
+        '[FAILED: action should be invariant under global left-right conjugation]'
+    
+    print('[PASSED]')
+
+_test_pcm_action()    
