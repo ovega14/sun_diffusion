@@ -115,4 +115,4 @@ def _test_pcm_action():
     
     print('[PASSED]')
 
-_test_pcm_action()    
+if __name__ == '__main__': _test_pcm_action()
