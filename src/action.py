@@ -1,9 +1,9 @@
 """Physical actions as functions of field configurations."""
 import torch
 
-from linalg import trace, adjoint
-from sun import random_sun_element, random_sun_lattice
-from utils import roll
+from .linalg import trace, adjoint
+from .sun import random_sun_element, random_sun_lattice
+from .utils import roll
 
 
 __all__ = [

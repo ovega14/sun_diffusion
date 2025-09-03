@@ -11,7 +11,7 @@ import itertools
 from torch import Tensor
 from typing import Optional
 
-from utils import grab
+from .utils import grab
 
 
 # =======================================================================

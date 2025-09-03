@@ -4,8 +4,8 @@ import numpy as np
 
 from torch import Tensor
 
-from linalg import trace, adjoint
-from gens import pauli
+from .linalg import trace, adjoint
+from .gens import pauli
 
 
 __all__ = [
@@ -19,7 +19,7 @@ __all__ = [
 
 # Set device for tests
 if __name__ == '__main__':
-    from devices import set_device, summary
+    from .devices import set_device, summary
     set_device('cpu')  # TODO: test group_to_coeffs failing on cuda
     print(summary())
 
@@ -157,7 +157,7 @@ def inner_prod(U, V):
 
 def _test_inner_prod():
     print('[Testing inner_prod]')
-    from gens import pauli
+    from .gens import pauli
 
     for i in range(4):
         pauli_i = pauli(i)
