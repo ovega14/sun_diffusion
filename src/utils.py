@@ -50,3 +50,31 @@ def _test_wrap():
 
 
 if __name__ == '__main__': _test_wrap()
+
+
+
+def roll(
+    x: NDArray | Tensor,
+    shifts: int | tuple[int, ...],
+    dims: int | tuple[int, ...]
+) -> NDArray | Tensor:
+    """
+    Bi-compatible wrapper for the `roll` function in NumPy and PyTorch.
+    
+    Rolls a NumPy array or PyTorch tensor around a given dimension or set of
+    dimensions given in `dims` by corresponding amount(s) specified in `shifts`.
+
+    Args:
+        x (Tensor, NDArray): Array or tensor object to roll
+        shifts (int, tuple): Shift amount(s), where negative values shift right
+        dims (int, tuple): Axes or dims along which to shift
+
+    Returns:
+        Rolled array / tensor
+    """
+    if isinstance(x, torch.Tensor):
+        return torch.roll(x, shifts=shifts, dims=dims)
+    elif isinstance(x, np.ndarray):
+        return np.roll(x, shift=shifts, axis=dims)
+    else:
+        raise TypeError(f'Unsupported type {type(x)}')
