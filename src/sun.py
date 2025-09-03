@@ -1,5 +1,7 @@
 """Utils for group/algbra operations with and between SU(N) variables."""
 import torch
+import numpy as np
+
 from torch import Tensor
 
 from linalg import trace, adjoint
@@ -60,7 +62,7 @@ def _test_proj_to_algebra():
 if __name__ == '__main__': _test_proj_to_algebra()
 
 
-def random_sun_element(batch_size: int, *, Nc: int) -> torch.Tensor:
+def random_sun_element(batch_size: int, *, Nc: int) -> Tensor:
     """
     Creates a random element of SU(N) whose elements are
     randomly sampled from a standard normal distribution.
@@ -95,6 +97,43 @@ def _test_random_sun_element():
 
 
 if __name__ == '__main__': _test_random_sun_element()
+
+
+def random_sun_lattice(batch_shape: tuple[int, ...], *, Nc: int) -> Tensor:
+    """
+    Creates a collection of random SU(N) matrices of 
+    arbitrary batch dimension specified by `batch_shape`.
+
+    Args:
+        batch_shape (tuple): Desired shape of batch to generate
+        Nc (int): Matrix dimension
+
+    Returns:
+        Random tensor of SU(N) matrices with shape `[*batch_shape, Nc, Nc]`
+    """
+    B = np.prod(batch_shape)
+    U = random_sun_element(B, Nc=Nc)
+    return U.reshape(*batch_shape, Nc, Nc)
+
+
+def _test_random_sun_lattice():
+    print('[Testing random_sun_lattice]')
+    batch_size = 5
+    lattice_shape = (8, 8)
+    batch_shape = (batch_size, *lattice_shape)
+    Nc = 2
+    U = random_sun_lattice(batch_shape, Nc=Nc)
+
+    detU = torch.linalg.det(U)
+    assert torch.allclose(detU, torch.ones_like(detU)), \
+        '[FAILED: matrix determinant not unity]'
+    I = torch.eye(Nc, dtype=U.dtype).repeat((1,) * (len(batch_shape) + 2))
+    assert torch.allclose(adjoint(U) @ U, I, atol=1e-6), \
+        '[FAILED: matrix not unitary]'
+    print('[PASSED]')
+
+
+if __name__ == '__main__': _test_random_sun_lattice()
 
 
 def inner_prod(U, V):
