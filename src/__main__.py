@@ -1,10 +1,15 @@
+import importlib
 import runpy
+import warnings
+# silence already imported warning from runpy
+warnings.simplefilter('ignore')
 
 
 def run_submodule(name: str) -> None:
     """Executes a submodule as a .py file."""
-    print(f'Running submodule {name}...')
-    runpy.run_module(name, run_name='__main__')
+    full_name = importlib.util.find_spec('.'+name, package=__package__).name
+    print(f'Running submodule {name} ({full_name})...')
+    runpy.run_module(full_name, run_name='__main__')
     print()
 
 

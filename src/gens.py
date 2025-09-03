@@ -9,7 +9,7 @@ __all__ = [
 
 
 if __name__ == '__main__':
-    from devices import set_device, summary
+    from .devices import set_device, summary
     set_device('cpu')
     print(summary())
 

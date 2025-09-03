@@ -2,13 +2,13 @@ from . import linalg
 from .linalg import *
 
 from . import sun
-from sun import *
+from .sun import *
 
 from . import action
-from action import *
+from .action import *
 
 from . import gens
-from gens import *
+from .gens import *
 
 from . import diffusion
-from diffusion import *
+from .diffusion import *
