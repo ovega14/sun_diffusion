@@ -66,7 +66,7 @@ class SUNPrincipalChiralAction:
 
     This theory enjoys two noteworthy symmetries:
         - local charge conjugation invariance: U(x) -> U^dagger(x)
-        - global left-right multiplication invariance: U(x) -> V_L(X) U(X) V_R^dagger(X)
+        - global left-right multiplication invariance: U(x) -> V_L U(X) V_R^dagger
 
     Args:
         beta (float): Inverse temperature parameter, equal to 1 / (Nc * T)
@@ -115,5 +115,6 @@ def _test_pcm_action():
         '[FAILED: action should be invariant under global left-right conjugation]'
     
     print('[PASSED]')
+
 
 if __name__ == '__main__': _test_pcm_action()
