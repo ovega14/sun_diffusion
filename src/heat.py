@@ -12,30 +12,31 @@ from torch import Tensor
 from typing import Optional
 
 from .utils import grab
+from .canon import canonicalize_sun
 
 
 # =======================================================================
 #  Euclidean Heat Kernel
 # =======================================================================
-def eucl_log_hk(x, *, width):
+def eucl_log_hk(x: Tensor, *, width: Tensor):
     """Log density of Euclidean heat kernel with width `width`."""
     return -(x**2).sum(-1) / (2 * width**2)
 
 
-def eucl_score_hk(x, *, width):
+def eucl_score_hk(x: Tensor, *, width: Tensor):
     """Analytical score function for the Euclidean heat kernel with width `width`."""
-    return -x / width**2
+    return -x / width[...,None]**2
 
 
 # =======================================================================
 #  SU(N) Heat Kernel
 # =======================================================================
-def _sun_hk_meas_J(delta):
+def _sun_hk_meas_J(delta: Tensor):
     """Measure term Jij on Hermitian matrix eigenvalue differences."""
     return 2 * torch.sin(delta / 2)
 
 
-def _sun_hk_meas_D(delta):
+def _sun_hk_meas_D(delta: Tensor):
     """Measure term Dij on Hermitian matrix eigenvalue differences."""
     return delta
 
@@ -83,13 +84,13 @@ def _sun_score_hk_unwrapped(xs, *, width):
 
     # Gradient of Gaussian weight term
     grad_weight = eucl_score_hk(xs, width=width)
-    return (grad_meas + grad_weight) * K[..., None]  # gradK (TODO)
+    return (grad_meas + grad_weight) * K[:,None]
 
 
 def sun_hk(
     thetas: Tensor,
     *,
-    width: float,
+    width: Tensor,
     n_max: Optional[int] = 3,
     eig_meas: Optional[bool] = True
 ) -> Tensor:
@@ -99,7 +100,7 @@ def sun_hk(
 
     Args:
         thetas (Tensor): Wrapped SU(N) eigenangles
-        width (float): Standard deviation of the heat kernel
+        width (Tensor): Standard deviation of the heat kernel, batched
         n_max (int): Max number of pre-image sum correction terms to include
         eig_meas (bool): Weather to include the measure term over the eigenangles
 
@@ -137,12 +138,13 @@ def sun_score_hk(
     """
     total = 0
     lattice_shifts = itertools.product(range(-n_max, n_max), repeat=thetas.shape[-1])
+    K = sun_hk(thetas, width=width, eig_meas=False)
     # Sum over periodic lattice shifts to account for pre-images
     for ns in lattice_shifts:
         ns = torch.tensor(ns)
         xs = thetas + 2*np.pi * ns
         total = total + _sun_score_hk_unwrapped(xs, width=width)
-    return total
+    return total / K[:,None]
 
 
 def sun_score_hk_autograd(
@@ -196,7 +198,7 @@ def sample_sun_hk(
     batch_size: int,
     Nc: int,
     *,
-    width: float,
+    width: Tensor,
     n_iter: Optional[int] = 3,
     n_max: Optional[int] = 3
 ):
@@ -221,18 +223,19 @@ def sample_sun_hk(
         return grab(canonicalize_sun(torch.tensor(xs)))
     
     # Sample eigenangles
+    assert width.shape == (batch_size,), 'width should be batched'
     xs = propose()
     for i in range(n_iter):
         xps = propose()
         # ratio b/w new, old points
-        p = sun_hk(xps[..., :-1], sigma=sigma, n_max=n_max)
-        p /= sun_hk(xs[..., :-1], sigma=sigma, n_max=n_max)
+        p = grab(sun_hk(torch.tensor(xps[..., :-1]), width=width, n_max=n_max))
+        p /= grab(sun_hk(torch.tensor(xs[..., :-1]), width=width, n_max=n_max))
         u = np.random.random(size=p.shape)
         xs[u < p] = xps[u < p]  # accept / reject step
 
     # Sample eigenvectors
-    V, _ = np.linalg.qr(np.random.randn(batch_size, Nc, Nc) + 1j * np.random.randn(batch_size, Nc, Nc))
-    D = np.identity(xs.shape[-1]) * xs[...,None]  # embed diagonal
-    A = V @ D @ adjoint(V)
-    
-    return xs, A
+    # V = grab(random_sun_haar_element(batch_size, Nc))
+    # D = np_embed_diag(xs)  # embed diagonal
+    # A = V @ D @ adjoint(V)
+    # return xs, A
+    return xs

@@ -13,6 +13,7 @@ from .gens import pauli
 __all__ = [
     'proj_to_algebra',
     'random_sun_element',
+    'random_un_haar_element',
     'inner_prod',
     'matrix_exp',
     'matrix_log'
@@ -27,7 +28,7 @@ if __name__ == '__main__':
 
 
 def proj_to_algebra(A: Tensor) -> Tensor:
-    """
+    r"""
     Projects a complex-valued matrix `A` into the Lie algebra
     of the group :math:`{\rm SU}(N_c)` by converting it into
     a traceless, Hermitian matrix.
@@ -100,7 +101,11 @@ def _test_random_sun_element():
 
 if __name__ == '__main__': _test_random_sun_element()
 
-
+def random_un_haar_element(batch_size: int, *, Nc: int) -> Tensor:
+    V, _ = torch.linalg.qr(
+        torch.randn((batch_size, Nc, Nc)) + 1j * torch.randn((batch_size, Nc, Nc)))
+    return V
+        
 def random_sun_lattice(batch_shape: tuple[int, ...], *, Nc: int) -> Tensor:
     """
     Creates a collection of random SU(N) matrices of 
@@ -253,7 +258,7 @@ if __name__ == '__main__': _test_group2coeffs()
 
 def coeffs_to_group(coeffs):
     """
-    Recomposes an SU(N) group element given the 
+    Recomposes an SU(N) group element given the
     coefficients of the generators in the Lie algebra su(N)
     by forming the linear combination with the group generators.
 
@@ -303,3 +308,12 @@ def mat_angle(U: Tensor) -> tuple[Tensor, Tensor, Tensor]:
     Vinv = torch.linalg.inv(V)
     th = torch.angle(L)
     return th, V, Vinv
+
+def embed_diag(d):
+    """Embed a batch of diagonal entries transforming the shape as
+        (..., n) -> (..., n, n)
+    """
+    return torch.eye(d.shape[-1]) * d[...,None]
+
+def np_embed_diag(d):
+    return np.identity(d.shape[-1]) * d[...,None]
