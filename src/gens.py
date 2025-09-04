@@ -31,7 +31,7 @@ _su2_gens = {
 
 
 def pauli(i: int) -> torch.Tensor:
-    """
+    r"""
     Retrieves the ith Pauli matrix as a PyTorch tensor.
 
     .. note:: The pauli matrices are normalized by a factor of

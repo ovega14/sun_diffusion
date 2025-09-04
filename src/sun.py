@@ -1,6 +1,8 @@
 """Utils for group/algbra operations with and between SU(N) variables."""
-import torch
+import functools
+import math
 import numpy as np
+import torch
 
 from torch import Tensor
 
@@ -11,6 +13,7 @@ from .gens import pauli
 __all__ = [
     'proj_to_algebra',
     'random_sun_element',
+    'random_un_haar_element',
     'inner_prod',
     'matrix_exp',
     'matrix_log'
@@ -25,7 +28,7 @@ if __name__ == '__main__':
 
 
 def proj_to_algebra(A: Tensor) -> Tensor:
-    """
+    r"""
     Projects a complex-valued matrix `A` into the Lie algebra
     of the group :math:`{\rm SU}(N_c)` by converting it into
     a traceless, Hermitian matrix.
@@ -98,7 +101,11 @@ def _test_random_sun_element():
 
 if __name__ == '__main__': _test_random_sun_element()
 
-
+def random_un_haar_element(batch_size: int, *, Nc: int) -> Tensor:
+    V, _ = torch.linalg.qr(
+        torch.randn((batch_size, Nc, Nc)) + 1j * torch.randn((batch_size, Nc, Nc)))
+    return V
+        
 def random_sun_lattice(batch_shape: tuple[int, ...], *, Nc: int) -> Tensor:
     """
     Creates a collection of random SU(N) matrices of 
@@ -183,6 +190,42 @@ def matrix_log(U):
     return -1j * (V @ logD @ adjoint(V))
 
 
+@functools.cache
+def sun_gens(Nc):
+    """
+    Generators of the SU(N) Lie algebra.
+
+    Normalized to satisfy Tr[T^a T^b] = delta^{ab}, so that the Nc=2 case equals
+    the Pauli matrices over sqrt(2) and the Nc=3 case equals the Gell-Mann
+    matrices over sqrt(2).
+    """
+    gens = []
+    for j in range(1,Nc):
+        for i in range(j):
+            gens.append(torch.zeros((Nc,Nc)) + 0j)
+            gens[-1][i,j] = 1
+            gens[-1][j,i] = 1
+            gens.append(torch.zeros((Nc,Nc)) + 0j)
+            gens[-1][i,j] = -1j
+            gens[-1][j,i] = 1j
+        gens.append(torch.zeros((Nc,Nc)) + 0j)
+        norm = np.sqrt(j*(j+1)/2)
+        for k in range(j):
+            gens[-1][k,k] = 1/norm
+        gens[-1][j,j] = -j/norm
+    # unit normalization
+    return torch.stack(gens) / np.sqrt(2)
+
+def embed_sun_algebra(omega, Nc):
+    gens = sun_gens(Nc)
+    return torch.einsum('...x,xab->...ab', omega.to(gens), gens)
+
+def extract_sun_algebra(A):
+    Nc, Nc_ = A.shape[-2:]
+    assert Nc == Nc_
+    gens = sun_gens(Nc)
+    return torch.einsum('...ab,xba->...x', A.to(gens), gens)
+
 def group_to_coeffs(U):
     """
     Decomposes an SU(N) group element into the coefficients
@@ -194,15 +237,7 @@ def group_to_coeffs(U):
     Returns:
         Batch of N^2 - 1 generator coefficients
     """
-    if U.size(-1) != 2:
-        raise NotImplementedError('Only implemented for SU(2) so far')
-    logU = matrix_log(U)
-    #print('logU dtype:', logU.dtype)
-    coeffs = []
-    for i in range(1, 4):
-        #print('pauli_i dtype:', pauli(i).dtype)
-        coeffs.append(inner_prod(pauli(i), logU))
-    return torch.stack(coeffs, dim=-1)
+    return extract_sun_algebra(matrix_log(U))
 
 
 def _test_group2coeffs():
@@ -223,7 +258,7 @@ if __name__ == '__main__': _test_group2coeffs()
 
 def coeffs_to_group(coeffs):
     """
-    Recomposes an SU(N) group element given the 
+    Recomposes an SU(N) group element given the
     coefficients of the generators in the Lie algebra su(N)
     by forming the linear combination with the group generators.
 
@@ -233,12 +268,8 @@ def coeffs_to_group(coeffs):
     Returns:
         Batch of SU(N) group elements
     """
-    if coeffs.size(-1) != 3:  # N^2 - 1 = 3 for SU(2)
-        raise NotImplementedError('Only implemented for SU(2) so far')
-    paulis = torch.stack([pauli(i) for i in range(1, 4)], dim=-1)  # [2, 2, 3]
-    A = torch.einsum('bg, ijg -> bij', coeffs.to(dtype=paulis.dtype), paulis)
-    A = proj_to_algebra(A)
-    return matrix_exp(A)
+    Nc = math.isqrt(coeffs.shape[-1]+1)
+    return matrix_exp(embed_sun_algebra(coeffs, Nc))
 
 
 def _test_coeffs2group():
@@ -277,3 +308,12 @@ def mat_angle(U: Tensor) -> tuple[Tensor, Tensor, Tensor]:
     Vinv = torch.linalg.inv(V)
     th = torch.angle(L)
     return th, V, Vinv
+
+def embed_diag(d):
+    """Embed a batch of diagonal entries transforming the shape as
+        (..., n) -> (..., n, n)
+    """
+    return torch.eye(d.shape[-1]) * d[...,None]
+
+def np_embed_diag(d):
+    return np.identity(d.shape[-1]) * d[...,None]

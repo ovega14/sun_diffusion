@@ -1,4 +1,6 @@
-from utils import wrap
+import numpy as np
+import torch
+from .utils import wrap
 
 
 __all__ = [
@@ -9,7 +11,7 @@ __all__ = [
 
 
 def canonicalize_su2(thW):
-    """
+    r"""
     Canonicalizes a set of SU(2) eigenangles :math:`(\theta_1, \theta_2)` by
 
         1.) Set :math:`\theta_1 = {\rm wrap}(|\theta|)`,
@@ -27,7 +29,7 @@ def canonicalize_su2(thW):
 
 
 def canonicalize_su3(thW):
-    """
+    r"""
     Canonicalizes a set of SU(3) eigenangles :math:`(\theta_1, theta_2, \theta_3)` by
 
         1.) Project onto hyperplane defined by :math:`\sum_i \theta_i = 0`,
@@ -69,14 +71,14 @@ def canonicalize_su3(thW):
     k = torch.round(b)
     b -= k
     c += k
-    b -= torch.round(b - (a + c)/2))
+    b -= torch.round(b - (a + c)/2)
 
     k = (b + c) / 2
     a -= k
     b -= k
     c -= k
     a -= torch.round(a)
-    c -= torch.round(c - (a + b)/2))
+    c -= torch.round(c - (a + b)/2)
 
     kappa = torch.stack([a, b, c], dim=0)
     return torch.transpose(U @ kappa, 0, 1).reshape(thW.shape)

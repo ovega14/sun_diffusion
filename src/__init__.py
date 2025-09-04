@@ -12,3 +12,6 @@ from .gens import *
 
 from . import diffusion
 from .diffusion import *
+
+from . import heat
+from .heat import *
