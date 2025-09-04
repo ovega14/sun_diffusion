@@ -7,7 +7,8 @@ from .utils import roll
 
 
 __all__ = [
-    'SUNToyAction'
+    'SUNToyAction',
+    'SUNPrincipalChiralAction'
 ]
 
 
