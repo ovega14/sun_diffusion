@@ -84,7 +84,7 @@ def _sun_score_hk_unwrapped(xs, *, width):
 
     # Gradient of Gaussian weight term
     grad_weight = eucl_score_hk(xs, width=width)
-    return (grad_meas + grad_weight) * K[:,None]
+    return (grad_meas + grad_weight) * K[...,None]
 
 
 def sun_hk(
@@ -144,7 +144,7 @@ def sun_score_hk(
         ns = torch.tensor(ns)
         xs = thetas + 2*np.pi * ns
         total = total + _sun_score_hk_unwrapped(xs, width=width)
-    return total / K[:,None]
+    return total / K[...,None]
 
 
 def sun_score_hk_autograd(
