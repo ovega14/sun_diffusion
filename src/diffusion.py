@@ -6,7 +6,8 @@ from .sun import random_un_haar_element, embed_diag, matrix_exp, adjoint
 
 
 __all__ = [
-    'VarianceExpandingDiffusion'
+    'VarianceExpandingDiffusion',
+    'VarianceExpandingDiffusionSUN'
 ]
 
 
