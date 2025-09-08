@@ -183,8 +183,9 @@ def _test_sun_score_hk():
     batch_size = 128
     Nc = 3
     thetas = 3*np.pi*torch.rand((batch_size, Nc-1))
+    width = torch.ones((batch_size,))
 
-    a = sun_score_hk(thetas, width=1.0, n_max=1)
+    a = sun_score_hk(thetas, width=width, n_max=1)
     b = sun_score_hk_autograd(thetas, width=1.0, n_max=1)
 
     assert torch.allclose(a, b), f'{a=} {b=} {a/b=}'
@@ -214,7 +215,7 @@ def sample_sun_hk(
         Nc (int): Dimension of fundamental rep. of SU(Nc)
         width (float) Standard deviation of heat kernel
         n_iter (int): Number of IS iterations
-        n_max (int): Max number o terms to include in HK pre-image sum
+        n_max (int): Max number of terms to include in HK pre-image sum
     """
     def propose():
         """Samples proposal eigenangles from uniform dist."""
