@@ -148,10 +148,10 @@ def sun_score_hk(
 
 
 def sun_score_hk_autograd(
-        thetas: Tensor,
-        *,
-        width: float,
-        n_max: Optional[int] = 3
+    thetas: Tensor,
+    *,
+    width: float,
+    n_max: Optional[int] = 3
 ) -> Tensor:
     """
     Computes the score function for the wrapped SU(N) heat kernel
