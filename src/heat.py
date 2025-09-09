@@ -144,7 +144,7 @@ def sun_score_hk(
         ns = torch.tensor(ns)
         xs = thetas + 2*np.pi * ns
         total = total + _sun_score_hk_unwrapped(xs, width=width)
-    return total / K[...,None]
+    return total / (K[...,None] + 1e-12)
 
 
 def sun_score_hk_autograd(
@@ -171,7 +171,7 @@ def sun_score_hk_autograd(
     Nc = thetas.shape[-1] + 1
     f = lambda ths: sun_hk(ths, width=width, n_max=n_max, eig_meas=False)
     def gradf(ths):
-        g = torch.func.grad(f)(ths)
+        g = torch.func.grad(f)(ths) / f(ths)
         gn = -g.sum(-1) / Nc
         return torch.cat([g + gn, gn[..., None]], dim=-1)
     return torch.func.vmap(gradf)(thetas)
