@@ -76,6 +76,7 @@ class VarianceExpandingDiffusion(DiffusionProcess):
         x_t = x_0 + sigma_t * eps
         return x_t
 
+
 class VarianceExpandingDiffusionSUN(DiffusionProcess):
     """
     Variance-expanding diffusion on SU(N) group manifold.
