@@ -204,7 +204,7 @@ def sample_sun_hk(
     n_max: Optional[int] = 3
 ):
     """
-    Generated `batch_size` many samples from the SU(Nc) heat
+    Generates `batch_size` many samples from the SU(Nc) heat
     kernel of width `width` using importance sampling by
 
         1.) Sampling eigenangles with `n_iter` iterations of IS
