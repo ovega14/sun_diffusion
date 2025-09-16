@@ -99,7 +99,7 @@ class VarianceExpandingDiffusionSUN(DiffusionProcess):
         denominator = 2 * torch.log(sigma)
         return (numerator / denominator) ** 0.5
 
-    def diffuse(self, U_0, t):
+    def diffuse(self, U_0, t, n_iter=3):
         r"""
         Diffuses input data `U_0` to a noise level projected
         forward to time step `t` according to the variance-expanding
@@ -116,7 +116,7 @@ class VarianceExpandingDiffusionSUN(DiffusionProcess):
         batch_size, Nc, Nc_ = U_0.shape
         assert Nc == Nc_
         sigma_t = self.sigma_func(t)
-        xs = torch.tensor(sample_sun_hk(batch_size, Nc, width=sigma_t))
+        xs = torch.tensor(sample_sun_hk(batch_size, Nc, width=sigma_t, n_iter=n_iter))
         V = random_un_haar_element(batch_size, Nc=Nc)
         A = V @ embed_diag(xs).to(V) @ adjoint(V)
         return matrix_exp(A) @ U_0, xs, V
