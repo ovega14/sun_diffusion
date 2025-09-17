@@ -9,8 +9,8 @@ from numpy.typing import NDArray
 HAS_CUDA = torch.cuda.is_available()
 _device = torch.device('cpu')
 _cuda_id = 0
-_default_dtype = torch.float32  # for real tensors
-_default_complex_dtype = torch.complex64  # default on GPU; complex128 on CPU
+_default_dtype = torch.float64  # for real tensors
+_default_complex_dtype = torch.complex128  # default 64 on GPU; complex128 on CPU
 
 
 def set_device(device: Optional[str] = None, cuda_id: Optional[int]  = 0) -> None:
