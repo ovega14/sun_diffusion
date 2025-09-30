@@ -107,8 +107,6 @@ def sun_hk(
     Returns:
         SU(N) heat kernel evaluated at the input angles `thetas`
     """
-    assert len(thetas.shape) == 2, \
-        'thetas should have shape [batch_size, Nc-1]'
     total = 0
     lattice_shifts = itertools.product(range(-n_max, n_max), repeat=thetas.shape[-1])
     # Sum over periodic lattice shifts to account for pre-images
