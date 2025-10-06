@@ -25,7 +25,7 @@ def eucl_log_hk(x: Tensor, *, width: Tensor):
 
 def eucl_score_hk(x: Tensor, *, width: Tensor):
     """Analytical score function for the Euclidean heat kernel with width `width`."""
-    return -x / width[...,None]**2
+    return -x / width[..., None]**2
 
 
 # =======================================================================
@@ -63,30 +63,6 @@ def _sun_hk_unwrapped(xs, *, width, eig_meas=True):
     return meas * weight
 
 
-def _sun_score_hk_unwrapped(xs, *, width):
-    """
-    Computes the analytical score function of the SU(N)
-    heat kernel over the unwrapped (non-compact) space of
-    eigenangles.
-    """
-    K = _sun_hk_unwrapped(xs, width=width, eig_meas=False)
-    xn = -torch.sum(xs, dim=-1, keepdims=True)
-    xs = torch.cat([xs, xn], dim=-1)
-
-    Nc = xs.shape[-1]
-    delta = xs[..., :, None] - xs[..., None, :]
-    delta += 0.1 * torch.eye(Nc).to(xs)  # avoid division by zero
-
-    # Gradient of measure term
-    grad_meas = 1 / delta - 0.5 / torch.tan(delta/2)
-    grad_meas = grad_meas * (1 - torch.eye(Nc)).to(xs)  # mask diagonal
-    grad_meas = grad_meas.sum(-1)
-
-    # Gradient of Gaussian weight term
-    grad_weight = eucl_score_hk(xs, width=width)
-    return (grad_meas + grad_weight) * K[...,None]
-
-
 def sun_hk(
     thetas: Tensor,
     *,
@@ -117,6 +93,42 @@ def sun_hk(
     return total
 
 
+def _sun_score_hk_unwrapped(xs: Tensor, *, width: Tensor) -> Tensor:
+    """
+    Computes the analytical score function for the SU(Nc) heat kernel over the 
+    unwrapped (non-compact) space of eigenangles.
+
+    .. note:: Assumes that `xs` only includes the Nc-1 independent eigenangles.
+
+    .. note:: This implementation returns the product of the score with the 
+    heat kernel, dK/dx = s(x) * K. 
+
+    Args:
+        xs (Tensor): Batch of unwrapped eigenangles, shaped `[B, Nc-1]`
+        width (Tensor): Std deviation of the heat kernel, shaped `[B]`
+
+    Returns:
+        (Tensor) Gradient of the SU(Nc) heat kernel w.r.t. eigenangles
+    """
+    K = _sun_hk_unwrapped(xs, width=width, eig_meas=False)
+
+    xn = -torch.sum(xs, dim=-1, keepdims=True)
+    xs = torch.cat([xs, xn], dim=-1)  # enforce tr(X) = 0
+    Nc = xs.shape[-1]
+    
+    delta = xs[..., :, None] - xs[..., None, :]
+    delta += 0.1 * torch.eye(Nc).to(xs)  # avoid division by zero
+
+    # Gradient of measure term
+    grad_meas = 1 / delta - 0.5 / torch.tan(delta/2)
+    grad_meas = grad_meas * (1 - torch.eye(Nc)).to(xs)  # mask diagonal
+    grad_meas = grad_meas.sum(-1)
+
+    # Gradient of Gaussian weight term
+    grad_weight = eucl_score_hk(xs, width=width)
+    return (grad_meas + grad_weight) * K[..., None]
+
+
 def sun_score_hk(
     thetas: Tensor,
     *,
@@ -145,6 +157,37 @@ def sun_score_hk(
         xs = thetas + 2*np.pi * ns
         total = total + _sun_score_hk_unwrapped(xs, width=width)
     return total / (K[...,None] + 1e-12)
+
+
+def _sun_score_hk_unwrapped_stable(xs: Tensor, *, width: Tensor) -> Tensor:
+    """
+    Computes the analytical score function for the unwrapped SU(Nc) heat 
+    kernel over the unwrapped space of eigenangles.
+
+    .. note:: Assumes that `xs` includes all Nc eigenangles.
+
+    Args:
+        xs (Tensor): Batch of unwrapped eigenangles, shaped `[B, Nc]`
+        width (float, Tensor): Standard deviation of the heat kernel
+
+    Returns:
+        (Tensor) Gradient of the log SU(Nc) heat kernel w.r.t. eigenangles
+    """
+    Nc = xs.shape[-1]
+    delta = xs[..., :, None] - xs[..., None, :]
+    delta += 1e-12 * torch.eye(Nc).to(xs)  # avoid division by zero
+
+    # Gradient of measure term
+    grad_meas = 1 / delta - 0.5 / torch.tan(delta/2)
+    grad_meas = grad_meas * (1 - torch.eye(Nc)).to(xs)
+    grad_meas = grad_meas.sum(-1)
+
+    # Gradient of Gaussian weight
+    grad_weight = eucl_score_hk(xs, width=width)
+
+    # Total
+    total_grad = grad_meas + grad_weight
+    return total_grad
 
 
 def sun_score_hk_autograd(
