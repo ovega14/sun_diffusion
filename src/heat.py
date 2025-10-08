@@ -18,9 +18,10 @@ from .canon import canonicalize_sun
 # =======================================================================
 #  Euclidean Heat Kernel
 # =======================================================================
-def eucl_log_hk(x: Tensor, *, width: Tensor):
+def eucl_log_hk(x: Tensor, *, width: Tensor) -> Tensor:
     """Log density of Euclidean heat kernel with width `width`."""
-    return -(x**2).sum(-1) / (2 * width**2)
+    dims = tuple(range(1, x.ndim))
+    return -(x**2).sum(dims) / (2 * width**2)
 
 
 def eucl_score_hk(x: Tensor, *, width: Tensor):
