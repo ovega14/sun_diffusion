@@ -113,8 +113,10 @@ class VarianceExpandingDiffusionSUN(DiffusionProcess):
             U_0 (Tensor): Input data
             t (Tensor): Time step to which to diffuse
         """
-        batch_size, Nc, Nc_ = U_0.shape
-        assert Nc == Nc_
+        batch_size = U_0.size(0)
+        Nc, Nc_ = U_0.shape[-2:]
+        assert Nc == Nc_, \
+            f'U_0 must be a Nc x Nc matrix; got {Nc} x {Nc_}'
         sigma_t = self.sigma_func(t)
         xs = torch.tensor(sample_sun_hk(batch_size, Nc, width=sigma_t, n_iter=n_iter))
         V = random_un_haar_element(batch_size, Nc=Nc)
