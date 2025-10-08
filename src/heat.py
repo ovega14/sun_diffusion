@@ -190,6 +190,70 @@ def _sun_score_hk_unwrapped_stable(xs: Tensor, *, width: Tensor) -> Tensor:
     return total_grad
 
 
+def sun_score_hk_stable(
+    thetas: Tensor, 
+    *, 
+    width: Tensor, 
+    n_max: Optional[int] = 3
+) -> Tensor:
+    """
+    Computes the exact score function for the SU(Nc) heat kernel over the
+    wrapped space of eigenangles. Implementation is done using `logsumexp` for 
+    more numerical stability.
+
+    .. note:: Assumes that `thetas` only includes the Nc-1 independent 
+    eigenangles.
+
+    Args:
+        thetas (Tensor): Batch of wrapped eigenangles, shaped `[B, Nc-1]`
+        width (Tensor): Std deviation of the heat kernel, shaped `[B]`
+        n_max (int): Max number of pre-image sum terms to include. Default: 3
+
+    Returns:
+        (Tensor) Gradient of the log SU(Nc) heat kernel w.r.t eigenangles
+    """
+    # Build all lattice shifts
+    Nc = thetas.size(-1) + 1
+    lattice_shifts = itertools.product(range(-n_max, n_max+1), repeat=Nc-1)
+    shifts = torch.tensor(list(lattice_shifts))
+    theta_exp = thetas.unsqueeze(1) + 2*np.pi*shifts.unsqueeze(0)
+    xN = -theta_exp.sum(dim=-1, keepdim=True)
+    xs = torch.cat([theta_exp, xN], dim=-1)
+
+    # Compute unwrapped scores and log K_unwrapped
+    grad_unwrapped = []
+    logK_unwrapped = []
+    for s in range(len(shifts)):
+        xn = xs[:, s, :]
+        g = _sun_score_hk_unwrapped_stable(xn, width=width)
+        grad_unwrapped.append(g)
+        
+        # Log measure term
+        ix, jx = torch.triu_indices(Nc, Nc, offset=1)
+        delta = torch.abs(xn[:, ix] - xn[:, jx])
+        logM = torch.log(delta) - torch.log(2*torch.sin(delta/2).abs())
+        logM = logM.sum(-1)  # sum over positive roots
+        
+        # Log K_unwrapped = log measure + log Gaussian weight
+        logG = eucl_log_hk(xn, width=width)
+        logK = logM + logG
+        logK_unwrapped.append(logK)
+        
+    grad_unwrapped = torch.stack(grad_unwrapped, dim=1)
+    logK_unwrapped = torch.stack(logK_unwrapped, dim=1)
+    
+    # logsumexp for K_wrapped
+    a_max = logK_unwrapped.max(dim=1, keepdim=True).values
+    sum_exp = torch.exp(logK_unwrapped - a_max).sum(dim=1, keepdim=True)
+    logK_wrapped = (a_max + torch.log(sum_exp + 1e-12)).squeeze(-1)
+
+    # softmax probs; weighted sum over shifts -> wrapped score
+    probs = torch.exp(logK_unwrapped - logK_wrapped.unsqueeze(-1))
+    probs = probs.unsqueeze(-1)
+    score_full = (probs * grad_unwrapped).sum(dim=1)
+    return score_full
+
+
 def sun_score_hk_autograd(
     thetas: Tensor,
     *,
