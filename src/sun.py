@@ -101,10 +101,34 @@ def _test_random_sun_element():
 
 if __name__ == '__main__': _test_random_sun_element()
 
-def random_un_haar_element(batch_size: int, *, Nc: int) -> Tensor:
-    V, _ = torch.linalg.qr(
-        torch.randn((batch_size, Nc, Nc)) + 1j * torch.randn((batch_size, Nc, Nc)))
+
+
+def random_un_haar_element(
+    batch_shape: int | tuple[int, ...], 
+    *, 
+    Nc: int
+) -> Tensor:
+    """
+    Samples a batch of random U(Nc) elements from the Haar measure using QR 
+    decomposition.
+
+    Args:
+        batch_shape (int, tuple): Batch dimension(s) of the matrices to create
+        Nc (int): Dimension of the matrix to generate
+
+    Returns:
+	V (Tensor): Batch of Haar-random Nc x Nc unitary matrices
+    """
+    if not isinstance(batch_shape, tuple):
+        batch_shape = (batch_shape,)
+    
+    U_re = torch.randn((*batch_shape, Nc, Nc))
+    U_im = torch.randn((*batch_shape, Nc, Nc))
+    U = U_re + 1j * U_im
+    
+    V, _ = torch.linalg.qr(U)
     return V
+
         
 def random_sun_lattice(batch_shape: tuple[int, ...], *, Nc: int) -> Tensor:
     """
