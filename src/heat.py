@@ -11,7 +11,7 @@ import itertools
 from torch import Tensor
 from typing import Optional
 
-from .utils import grab
+from .utils import grab, logsumexp_signed
 from .canon import canonicalize_sun
 
 
@@ -42,6 +42,30 @@ def _sun_hk_meas_D(delta: Tensor):
     return delta
 
 
+def _log_sun_hk_unwrapped(xs, *, width, eig_meas=True):
+    """Computes the SU(N) Heat Kernel over the unwrapped space of eigenangles."""
+    xn = -torch.sum(xs, dim=-1, keepdims=True)
+    xs = torch.cat([xs, xn], dim=-1)
+
+    # Compute pariwise differences between eigenangles
+    delta_x = torch.stack([
+        xs[..., i] - xs[..., j]
+        for i in range(xs.shape[-1]) for j in range(i+1, xs.shape[-1])
+    ], dim=-1)
+
+    # Include / exclude Haar measure J^2 factor
+    J_sign = 1 if eig_meas else -1
+    log_meas = torch.sum(
+        _sun_hk_meas_D(delta_x).abs().log() +
+        J_sign * _sun_hk_meas_J(delta_x).abs().log(), dim=-1)
+    sign = torch.prod(
+        _sun_hk_meas_D(delta_x).sign() *
+        _sun_hk_meas_J(delta_x).sign(), dim=-1)
+
+    # Gaussian (Euclidean) heat kernel weight
+    log_weight = eucl_log_hk(xs, width=width)
+    return log_meas + log_weight, sign
+
 def _sun_hk_unwrapped(xs, *, width, eig_meas=True):
     """Computes the SU(N) Heat Kernel over the unwrapped space of eigenangles."""
     xn = -torch.sum(xs, dim=-1, keepdims=True)
@@ -64,6 +88,27 @@ def _sun_hk_unwrapped(xs, *, width, eig_meas=True):
     return meas * weight
 
 
+def log_sun_hk(
+    thetas: Tensor,
+    *,
+    width: Tensor,
+    n_max: Optional[int] = 3,
+    eig_meas: Optional[bool] = True
+) -> Tensor:
+    log_values = []
+    signs = []
+    lattice_shifts = itertools.product(range(-n_max, n_max+1), repeat=thetas.shape[-1])
+    # Sum over periodic lattice shifts to account for pre-images
+    for ns in lattice_shifts:
+        ns = torch.tensor(ns)
+        xs = thetas + 2*np.pi * ns
+        log_value, sign = _log_sun_hk_unwrapped(xs, width=width, eig_meas=eig_meas)
+        log_values.append(log_value)
+        signs.append(sign)
+    log_total, signs = logsumexp_signed(torch.stack(log_values), torch.stack(signs), axis=0)
+    # assert torch.all(signs > 0)
+    return log_total
+
 def sun_hk(
     thetas: Tensor,
     *,
@@ -84,14 +129,7 @@ def sun_hk(
     Returns:
         SU(N) heat kernel evaluated at the input angles `thetas`
     """
-    total = 0
-    lattice_shifts = itertools.product(range(-n_max, n_max), repeat=thetas.shape[-1])
-    # Sum over periodic lattice shifts to account for pre-images
-    for ns in lattice_shifts:
-        ns = torch.tensor(ns)
-        xs = thetas + 2*np.pi * ns
-        total = total + _sun_hk_unwrapped(xs, width=width, eig_meas=eig_meas)
-    return total
+    return log_sun_hk(thetas, width=width, n_max=n_max, eig_meas=eig_meas).exp()
 
 
 def _sun_score_hk_unwrapped(xs: Tensor, *, width: Tensor) -> Tensor:
@@ -111,7 +149,6 @@ def _sun_score_hk_unwrapped(xs: Tensor, *, width: Tensor) -> Tensor:
     Returns:
         (Tensor) Gradient of the SU(Nc) heat kernel w.r.t. eigenangles
     """
-    K = _sun_hk_unwrapped(xs, width=width, eig_meas=False)
 
     xn = -torch.sum(xs, dim=-1, keepdims=True)
     xs = torch.cat([xs, xn], dim=-1)  # enforce tr(X) = 0
@@ -127,7 +164,7 @@ def _sun_score_hk_unwrapped(xs: Tensor, *, width: Tensor) -> Tensor:
 
     # Gradient of Gaussian weight term
     grad_weight = eucl_score_hk(xs, width=width)
-    return (grad_meas + grad_weight) * K[..., None]
+    return grad_meas + grad_weight
 
 
 def sun_score_hk(
@@ -150,14 +187,17 @@ def sun_score_hk(
         Analytical gradient of the SU(N) heat kernel log-density
     """
     total = 0
-    lattice_shifts = itertools.product(range(-n_max, n_max), repeat=thetas.shape[-1])
-    K = sun_hk(thetas, width=width, eig_meas=False)
+    lattice_shifts = itertools.product(range(-n_max, n_max+1), repeat=thetas.shape[-1])
+    # K = sun_hk(thetas, width=width, eig_meas=False)
+    logK = log_sun_hk(thetas, width=width, eig_meas=False)
     # Sum over periodic lattice shifts to account for pre-images
     for ns in lattice_shifts:
         ns = torch.tensor(ns)
         xs = thetas + 2*np.pi * ns
-        total = total + _sun_score_hk_unwrapped(xs, width=width)
-    return total / (K[...,None] + 1e-12)
+        # Ki = _sun_hk_unwrapped(xs, width=width, eig_meas=False)
+        logKi, si = _log_sun_hk_unwrapped(xs, width=width, eig_meas=False)
+        total = total + (si * (logKi-logK).exp())[...,None] * _sun_score_hk_unwrapped(xs, width=width)
+    return total
 
 
 def _sun_score_hk_unwrapped_stable(xs: Tensor, *, width: Tensor) -> Tensor:
@@ -284,19 +324,59 @@ def sun_score_hk_autograd(
         return torch.cat([g + gn, gn[..., None]], dim=-1)
     return torch.func.vmap(gradf)(thetas)
 
+def sun_score_hk_autograd2(
+    thetas: Tensor,
+    *,
+    width: float,
+    n_max: Optional[int] = 3
+) -> Tensor:
+    """
+    Computes the score function for the wrapped SU(N) heat kernel
+    of width `width` by automatic differentiation of the log density
+    in `thetas`.
+
+    Args:
+        thetas (Tensor): Wrapped SU(N) eigenangles
+        width (float): Standard deviation of the heat kernel
+        n_max (int): Max number of pre-image sum correction terms to include
+
+    Returns:
+        Autograd derivative of the SU(N) heat kernel log-density
+    """
+    if len(thetas.shape) != 2:
+        raise ValueError('Expects batched thetas')
+    Nc = thetas.shape[-1] + 1
+    f = lambda ths: log_sun_hk(ths, width=width, n_max=n_max, eig_meas=False)
+    def gradf(ths):
+        g = torch.func.grad(f)(ths)
+        gn = -g.sum(-1) / Nc
+        return torch.cat([g + gn, gn[..., None]], dim=-1)
+    return torch.func.vmap(gradf)(thetas)
+
 
 def _test_sun_score_hk():
     print('[Testing sun_score_hk]')
     torch.manual_seed(1234)
-    batch_size = 128
+    batch_size = 16
     Nc = 3
-    thetas = 3*np.pi*torch.rand((batch_size, Nc-1))
-    width = torch.ones((batch_size,))
+    thetas = 4*np.pi*(2*torch.rand((batch_size, Nc))-1)
+    thetas = canonicalize_sun(thetas)
+    thetas_in = thetas[:,:-1]
+    # NOTE(gkanwar): Making the width much smaller results in the autograd impls
+    # giving nan while sun_score_hk remains stable.
+    width = 0.5
+    width_batch = width * torch.ones((batch_size,))
 
-    a = sun_score_hk(thetas, width=width, n_max=1)
-    b = sun_score_hk_autograd(thetas, width=1.0, n_max=1)
+    a = sun_score_hk(thetas_in, width=width_batch, n_max=1)
+    b = sun_score_hk_autograd2(thetas_in, width=width, n_max=1)
+    c = sun_score_hk_autograd(thetas_in, width=width, n_max=1)
 
-    assert torch.allclose(a, b), f'{a=} {b=} {a/b=}'
+    assert torch.allclose(b, c), f'{b=} {c=} {b/c=}'
+
+    inds = (torch.sum(~torch.isclose(a, b), dim=-1) != 0)
+    ratio = a/b
+    thetas_ratio = grab(torch.stack([ratio[inds], thetas[inds]/np.pi], dim=-2))
+    assert torch.allclose(a, b), f'{a[inds]=} {b[inds]=}\n{thetas_ratio=}'
     print('[PASSED test_sun_score]')
 
 
