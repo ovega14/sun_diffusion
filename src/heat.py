@@ -307,9 +307,8 @@ def sun_score_hk_autograd(
     n_max: Optional[int] = 3
 ) -> Tensor:
     """
-    Computes the score function for the wrapped SU(N) heat kernel
-    of width `width` by automatic differentiation of the log density
-    in `thetas`.
+    Computes the score function for the wrapped SU(N) heat kernel by automatic
+    differentiation of the log density in the eigenangles `thetas`.
 
     Args:
         thetas (Tensor): Wrapped SU(N) eigenangles
@@ -329,16 +328,16 @@ def sun_score_hk_autograd(
         return torch.cat([g + gn, gn[..., None]], dim=-1)
     return torch.func.vmap(gradf)(thetas)
 
-def sun_score_hk_autograd2(
+
+def sun_score_hk_autograd_v2(
     thetas: Tensor,
     *,
     width: float,
     n_max: Optional[int] = 3
 ) -> Tensor:
     """
-    Computes the score function for the wrapped SU(N) heat kernel
-    of width `width` by automatic differentiation of the log density
-    in `thetas`.
+    Computes the score function for the wrapped SU(N) heat kernel by automatic
+    differentiation of the log density in the eigenangles `thetas`.
 
     Args:
         thetas (Tensor): Wrapped SU(N) eigenangles
@@ -373,7 +372,7 @@ def _test_sun_score_hk():
     width_batch = width * torch.ones((batch_size,))
 
     a = sun_score_hk(thetas_in, width=width_batch, n_max=1)
-    b = sun_score_hk_autograd2(thetas_in, width=width, n_max=1)
+    b = sun_score_hk_autograd_v2(thetas_in, width=width, n_max=1)
     c = sun_score_hk_autograd(thetas_in, width=width, n_max=1)
 
     assert torch.allclose(b, c), f'{b=} {c=} {b/c=}'
