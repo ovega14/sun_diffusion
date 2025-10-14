@@ -1,5 +1,5 @@
 """Utilities for ODE integration."""
-from typing import Callable
+from typing import Callable, Optional
 import torch
 
 
