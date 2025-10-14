@@ -1,8 +1,8 @@
 """
-A note on conventions: For now, we use `width` to denote what was
-previously called `sigma` since the heat kernel standard deviation
-can sometimes be a function of time or depend directly on time itself.
-Sigma can be a related or unrelated parameter elsewhere.
+A note on conventions: For now, we use `width` to denote what was previously
+called `sigma` since the heat kernel standard deviation can sometimes be a
+function of time or depend directly on time itself. Sigma can be a related or
+unrelated parameter elsewhere.
 """
 import torch
 import numpy as np
@@ -15,35 +15,35 @@ from .utils import grab, logsumexp_signed
 from .canon import canonicalize_sun
 
 
-# =======================================================================
+# =============================================================================
 #  Euclidean Heat Kernel
-# =======================================================================
+# =============================================================================
 def eucl_log_hk(x: Tensor, *, width: Tensor) -> Tensor:
-    """Log density of Euclidean heat kernel with width `width`."""
+    """Log density of Euclidean heat kernel, ignoring normalization."""
     dims = tuple(range(1, x.ndim))
     return -(x**2).sum(dims) / (2 * width**2)
 
 
 def eucl_score_hk(x: Tensor, *, width: Tensor):
-    """Analytical score function for the Euclidean heat kernel with width `width`."""
+    """Analytical score function for the Euclidean heat kernel."""
     return -x / width[..., None]**2
 
 
-# =======================================================================
+# =============================================================================
 #  SU(N) Heat Kernel
-# =======================================================================
-def _sun_hk_meas_J(delta: Tensor):
+# =============================================================================
+def _sun_hk_meas_J(delta):
     """Measure term Jij on Hermitian matrix eigenvalue differences."""
     return 2 * torch.sin(delta / 2)
 
 
-def _sun_hk_meas_D(delta: Tensor):
+def _sun_hk_meas_D(delta):
     """Measure term Dij on Hermitian matrix eigenvalue differences."""
     return delta
 
 
 def _log_sun_hk_unwrapped(xs, *, width, eig_meas=True):
-    """Computes the SU(N) Heat Kernel over the unwrapped space of eigenangles."""
+    """Computes the SU(N) log Heat Kernel over the unwrapped eigenangles."""
     xn = -torch.sum(xs, dim=-1, keepdims=True)
     xs = torch.cat([xs, xn], dim=-1)
 
@@ -66,8 +66,9 @@ def _log_sun_hk_unwrapped(xs, *, width, eig_meas=True):
     log_weight = eucl_log_hk(xs, width=width)
     return log_meas + log_weight, sign
 
+
 def _sun_hk_unwrapped(xs, *, width, eig_meas=True):
-    """Computes the SU(N) Heat Kernel over the unwrapped space of eigenangles."""
+    """Computes the SU(N) Heat Kernel over the unwrapped eigenangles."""
     xn = -torch.sum(xs, dim=-1, keepdims=True)
     xs = torch.cat([xs, xn], dim=-1)
 
@@ -95,19 +96,23 @@ def log_sun_hk(
     n_max: Optional[int] = 3,
     eig_meas: Optional[bool] = True
 ) -> Tensor:
+    """Computes the SU(N) log Heat Kernel over wrapped eigenangles."""
     log_values = []
     signs = []
-    lattice_shifts = itertools.product(range(-n_max, n_max+1), repeat=thetas.shape[-1])
+    
     # Sum over periodic lattice shifts to account for pre-images
+    lattice_shifts = itertools.product(range(-n_max, n_max+1), repeat=thetas.shape[-1])
     for ns in lattice_shifts:
         ns = torch.tensor(ns)
         xs = thetas + 2*np.pi * ns
         log_value, sign = _log_sun_hk_unwrapped(xs, width=width, eig_meas=eig_meas)
         log_values.append(log_value)
         signs.append(sign)
+
     log_total, signs = logsumexp_signed(torch.stack(log_values), torch.stack(signs), axis=0)
     # assert torch.all(signs > 0)
     return log_total
+
 
 def sun_hk(
     thetas: Tensor,
