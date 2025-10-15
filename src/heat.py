@@ -223,7 +223,8 @@ def sun_score_hk_old(thetas, *, width, n_max=3):  # (ovega): the original implem
         ns = torch.tensor(ns)
         xs = thetas + 2*np.pi * ns
         total = total + _sun_score_hk_unwrapped_old(xs, width=width)
-    return total / K[..., None]
+    #return total / K[..., None]
+    return total / (K[..., None] + 1e-12)
 
 
 def sun_score_hk(
