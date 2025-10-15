@@ -217,12 +217,12 @@ def sun_score_hk_old(thetas, *, width, n_max=3):  # (ovega): the original implem
     """
     total = 0
     lattice_shifts = itertools.product(range(-n_max, n_max), repeat=thetas.shape[-1])
-    K = sun_hk(thetas, width=width, eig_meas=False)
+    K = sun_hk_old(thetas, width=width, eig_meas=False)
     # Sum over periodic lattice shifts to account for pre-images
     for ns in lattice_shifts:
         ns = torch.tensor(ns)
         xs = thetas + 2*np.pi * ns
-        total = total + _sun_score_hk_unwrapped(xs, width=width)
+        total = total + _sun_score_hk_unwrapped_old(xs, width=width)
     return total / K[..., None]
 
 
