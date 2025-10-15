@@ -89,6 +89,18 @@ def _sun_hk_unwrapped(xs, *, width, eig_meas=True):
     return meas * weight
 
 
+def sun_hk_old(thetas, *, width, n_max=3, eig_meas=True):  # (ovega): the original implementation
+    """Computes the SU(N) heat kernel over the wrapped eigenangles."""
+    total = 0
+    lattice_shifts = itertools.product(range(-n_max, n_max), repeat=thetas.shape[-1])
+    # Sum over periodic lattice shifts to account for pre-images
+    for ns in lattice_shifts:
+        ns = torch.tensor(ns)
+        xs = thetas + 2*np.pi * ns
+        total = total + _sun_hk_unwrapped(xs, width=width, eig_meas=eig_meas)
+    return total
+
+
 def log_sun_hk(
     thetas: Tensor,
     *,
@@ -137,6 +149,31 @@ def sun_hk(
     return log_sun_hk(thetas, width=width, n_max=n_max, eig_meas=eig_meas).exp()
 
 
+def _sun_score_hk_unwrapped_old(xs, *, width):  # (ovega): the original implementation
+    """
+    Computes the analytical score function for the SU(Nc) heat kernel over the 
+    unwrapped (non-compact) space of eigenangles.
+    """
+    K = _sun_hk_unwrapped(xs, width=width, eig_meas=False)
+
+    xn = -torch.sum(xs, dim=-1, keepdims=True)
+    xs = torch.cat([xs, xn], dim=-1)  # enforce tr(X) = 0
+    Nc = xs.shape[-1]
+
+    delta = xs[..., :, None] - xs[..., None, :]
+    delta += 0.1 * torch.eye(Nc).to(xs)  # avoid division by zero
+
+    # Gradient of measure term
+    grad_meas = 1 / delta - 0.5 / torch.tan(delta/2)
+    grad_meas = grad_meas * (1 - torch.eye(Nc)).to(xs)  # mask diagonal
+    grad_meas = grad_meas.sum(-1)
+
+    # Gradient of Gaussian weight term
+    grad_weight = eucl_score_hk(xs, width=width)
+
+    return (grad_meas + grad_weight) * K[..., None]
+
+
 def _sun_score_hk_unwrapped(xs: Tensor, *, width: Tensor) -> Tensor:
     """
     Computes the analytical score function for the SU(Nc) heat kernel over the 
@@ -172,6 +209,23 @@ def _sun_score_hk_unwrapped(xs: Tensor, *, width: Tensor) -> Tensor:
     return grad_meas + grad_weight
 
 
+def sun_score_hk_old(thetas, *, width, n_max=3):  # (ovega): the original implementation
+    """
+    Computes the analytical score function for the wrapped
+    SU(N) heat kernel of width `width` as a function of
+    wrapped SU(N) eigenangles.
+    """
+    total = 0
+    lattice_shifts = itertools.product(range(-n_max, n_max), repeat=thetas.shape[-1])
+    K = sun_hk(thetas, width=width, eig_meas=False)
+    # Sum over periodic lattice shifts to account for pre-images
+    for ns in lattice_shifts:
+        ns = torch.tensor(ns)
+        xs = thetas + 2*np.pi * ns
+        total = total + _sun_score_hk_unwrapped(xs, width=width)
+    return total / K[..., None]
+
+
 def sun_score_hk(
     thetas: Tensor,
     *,
@@ -205,38 +259,7 @@ def sun_score_hk(
     return total
 
 
-def _sun_score_hk_unwrapped_stable(xs: Tensor, *, width: Tensor) -> Tensor:
-    """
-    Computes the analytical score function for the unwrapped SU(Nc) heat 
-    kernel over the unwrapped space of eigenangles.
-
-    .. note:: Assumes that `xs` includes all Nc eigenangles.
-
-    Args:
-        xs (Tensor): Batch of unwrapped eigenangles, shaped `[B, Nc]`
-        width (float, Tensor): Standard deviation of the heat kernel
-
-    Returns:
-        (Tensor) Gradient of the log SU(Nc) heat kernel w.r.t. eigenangles
-    """
-    Nc = xs.shape[-1]
-    delta = xs[..., :, None] - xs[..., None, :]
-    delta += 1e-12 * torch.eye(Nc).to(xs)  # avoid division by zero
-
-    # Gradient of measure term
-    grad_meas = 1 / delta - 0.5 / torch.tan(delta/2)
-    grad_meas = grad_meas * (1 - torch.eye(Nc)).to(xs)
-    grad_meas = grad_meas.sum(-1)
-
-    # Gradient of Gaussian weight
-    grad_weight = eucl_score_hk(xs, width=width)
-
-    # Total
-    total_grad = grad_meas + grad_weight
-    return total_grad
-
-
-def sun_score_hk_stable(
+def sun_score_hk_stable(  # (ovega): this was my alternative 'stable' implementation
     thetas: Tensor, 
     *, 
     width: Tensor, 
@@ -271,7 +294,7 @@ def sun_score_hk_stable(
     logK_unwrapped = []
     for s in range(len(shifts)):
         xn = xs[:, s, :]
-        g = _sun_score_hk_unwrapped_stable(xn, width=width)
+        g = _sun_score_hk_unwrapped(xn, width=width)
         grad_unwrapped.append(g)
         
         # Log measure term
