@@ -65,7 +65,7 @@ def _test_proj_to_algebra():
 if __name__ == '__main__': _test_proj_to_algebra()
 
 
-def random_sun_element(batch_size: int, *, Nc: int) -> Tensor:
+def random_sun_element(batch_size: int, *, Nc: int, sigma: float = 1.0) -> Tensor:
     """
     Creates a random element of SU(N) whose elements are
     randomly sampled from a standard normal distribution.
@@ -81,7 +81,7 @@ def random_sun_element(batch_size: int, *, Nc: int) -> Tensor:
     A_im = torch.randn((batch_size, Nc, Nc))
     A = A_re + 1j * A_im
     A = proj_to_algebra(A)
-    return torch.matrix_exp(1j * A)
+    return torch.matrix_exp(1j * sigma * A)
 
 
 def _test_random_sun_element():
