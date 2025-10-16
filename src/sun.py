@@ -335,11 +335,17 @@ def mat_angle(U: Tensor) -> tuple[Tensor, Tensor, Tensor]:
     th = torch.angle(L)
     return th, V, Vinv
 
+def extract_diag(M):
+    return torch.einsum('...ii->...i', M)
+
 def embed_diag(d):
     """Embed a batch of diagonal entries transforming the shape as
         (..., n) -> (..., n, n)
     """
     return torch.eye(d.shape[-1]) * d[...,None]
+
+def np_extract_diag(M):
+    return np.einsum('...ii->...i', M)
 
 def np_embed_diag(d):
     return np.identity(d.shape[-1]) * d[...,None]
