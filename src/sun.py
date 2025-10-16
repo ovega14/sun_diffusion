@@ -126,8 +126,10 @@ def random_un_haar_element(
     U_im = torch.randn((*batch_shape, Nc, Nc))
     U = U_re + 1j * U_im
     
-    V, _ = torch.linalg.qr(U)
-    return V
+    Q, R = torch.linalg.qr(U)
+    R *= torch.eye(R.shape[-1])
+    R /= torch.abs(R) + (1-torch.eye(R.shape[-1]))
+    return Q @ R
 
         
 def random_sun_lattice(batch_shape: tuple[int, ...], *, Nc: int) -> Tensor:
