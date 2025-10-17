@@ -445,10 +445,10 @@ def sample_sun_hk(
     for i in range(n_iter):
         xps = propose()
         # ratio b/w new, old points
-        p = grab(sun_hk(torch.tensor(xps[..., :-1]), width=width, n_max=n_max))
-        p /= grab(sun_hk(torch.tensor(xs[..., :-1]), width=width, n_max=n_max))
-        u = np.random.random(size=p.shape)
-        xs[u < p] = xps[u < p]  # accept / reject step
+        logp = grab(log_sun_hk(torch.tensor(xps[..., :-1]), width=width, n_max=n_max))
+        logp -= grab(log_sun_hk(torch.tensor(xs[..., :-1]), width=width, n_max=n_max))
+        u = np.log(np.random.random(size=logp.shape))
+        xs[u < logp] = xps[u < logp]  # accept / reject step
 
     # Sample eigenvectors
     # V = grab(random_sun_haar_element(batch_size, Nc))

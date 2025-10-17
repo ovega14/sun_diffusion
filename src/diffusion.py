@@ -77,28 +77,8 @@ class VarianceExpandingDiffusion(DiffusionProcess):
         return x_t
 
 
-class VarianceExpandingDiffusionSUN(DiffusionProcess):
-    """
-    Variance-expanding diffusion on SU(N) group manifold.
-
-    Args:
-        sigma (float): Noise scale
-    """
-    def __init__(self, sigma: float):
-        super().__init__()
-        self.sigma = sigma
-
-    def noise_coeff(self, t):
-        """Returns the noise (diffusion) coefficient g(t) at time `t`."""
-        return self.sigma ** t
-
-    def sigma_func(self, t):
-        """Returns the std dev of the Euclidean heat kernel at time `t`."""
-        sigma = torch.tensor(self.sigma)
-        numerator = sigma ** (2*t) - 1
-        denominator = 2 * torch.log(sigma)
-        return (numerator / denominator) ** 0.5
-
+class DiffusionSUN(DiffusionProcess):
+    """Provides SU(N) diffusion sampling assuming subclasses define sigma_func(t)."""
     def diffuse(self, U_0, t, n_iter=3):
         r"""
         Diffuses input data `U_0` to a noise level projected
@@ -122,3 +102,47 @@ class VarianceExpandingDiffusionSUN(DiffusionProcess):
         V = random_un_haar_element(batch_size, Nc=Nc)
         A = V @ embed_diag(xs).to(V) @ adjoint(V)
         return matrix_exp(A) @ U_0, xs, V
+
+class VarianceExpandingDiffusionSUN(DiffusionSUN):
+    """
+    Variance-expanding diffusion on SU(N) group manifold.
+
+    Args:
+        sigma (float): Noise scale
+    """
+    def __init__(self, sigma: float):
+        super().__init__()
+        self.sigma = sigma
+
+    def noise_coeff(self, t):
+        """Returns the noise (diffusion) coefficient g(t) at time `t`."""
+        return self.sigma ** t
+
+    def sigma_func(self, t):
+        """Returns the std dev of the Euclidean heat kernel at time `t`."""
+        sigma = torch.tensor(self.sigma)
+        numerator = sigma ** (2*t) - 1
+        denominator = 2 * torch.log(sigma)
+        return (numerator / denominator) ** 0.5
+
+
+class PowerDiffusionSUN(DiffusionSUN):
+    """
+    Variance-expanding diffusion on SU(N) group manifold.
+
+    Args:
+        sigma (float): Noise scale
+    """
+    def __init__(self, sigma: float, alpha: float):
+        super().__init__()
+        self.sigma = sigma
+        self.alpha = alpha
+
+    def noise_coeff(self, t):
+        """Returns the noise (diffusion) coefficient g(t) at time `t`."""
+        return t**self.alpha * self.sigma
+
+    def sigma_func(self, t):
+        """Returns the std dev of the Euclidean heat kernel at time `t`."""
+        p = 2*self.alpha+1
+        return (t**p / p)**0.5 * self.sigma
