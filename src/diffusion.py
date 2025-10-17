@@ -145,4 +145,4 @@ class PowerDiffusionSUN(DiffusionSUN):
     def sigma_func(self, t):
         """Returns the std dev of the Euclidean heat kernel at time `t`."""
         p = 2*self.alpha+1
-        return (t**p / p)**0.5 * self.sigma
+        return (t**p / p)**0.5 * torch.tensor(self.sigma)
