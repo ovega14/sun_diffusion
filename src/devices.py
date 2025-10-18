@@ -53,6 +53,11 @@ def get_dtype(complex: bool = False) -> torch.dtype:
     """Return the current default dtype (complex or real)."""
     return _default_complex_dtype if complex else _default_dtype
 
+def set_dtype(dtype: torch.dtype):
+    global _default_dtype
+    torch.set_default_dtype(dtype)
+    _default_dtype = torch.get_default_dtype()
+    _default_complex_dtype = torch.promote_types(_default_dtype, torch.complex64)
 
 def device_name() -> str:
     """Get human-readable name for current device."""

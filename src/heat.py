@@ -42,7 +42,7 @@ def _sun_hk_meas_D(delta):
     return delta
 
 
-def _log_sun_hk_unwrapped(xs, *, width, eig_meas=True):
+def _log_sun_hk_unwrapped(xs: Tensor, *, width, eig_meas=True):
     """Computes the SU(N) log Heat Kernel over the unwrapped eigenangles."""
     xn = -torch.sum(xs, dim=-1, keepdims=True)
     xs = torch.cat([xs, xn], dim=-1)
@@ -411,7 +411,7 @@ def _test_sun_score_hk():
 if __name__ == '__main__': _test_sun_score_hk()
 
 
-def sample_sun_hk(
+def sample_sun_hk_old(
     batch_size: int,
     Nc: int,
     *,
@@ -456,3 +456,65 @@ def sample_sun_hk(
     # A = V @ D @ adjoint(V)
     # return xs, A
     return xs
+
+def sample_sun_hk(
+    batch_size: int,
+    Nc: int,
+    *,
+    width: Tensor,
+    n_iter: Optional[int] = 3,
+    n_max: Optional[int] = 3
+):
+    """
+    Generates `batch_size` many samples from the SU(Nc) heat
+    kernel of width `width` using importance sampling by
+
+        1.) Sampling eigenangles with `n_iter` iterations of IS
+        2.) Sample random eigenvectors and recomposing with eigenvals
+
+    Args:
+        batch_size (int): Number of samples to generate
+        Nc (int): Dimension of fundamental rep. of SU(Nc)
+        width (float) Standard deviation of heat kernel
+        n_iter (int): Number of IS iterations
+        n_max (int): Max number of terms to include in HK pre-image sum
+    """
+    def propose():
+        """Samples proposal eigenangles from patched measure."""
+        sigma_cut = 0.5
+        xa = 2*np.pi*torch.rand(size=(batch_size, Nc))
+        xa[...,-1] = -torch.sum(xa[...,:-1], dim=-1)
+        xb = width[...,None] * torch.randn(size=(batch_size, Nc))
+        xb -= torch.mean(xb, dim=-1, keepdim=True)
+        assert torch.all((width[...,None] > sigma_cut) | (xb.abs() < np.pi))
+        xs = torch.where(width[...,None] < sigma_cut, xb, xa)
+        xs = canonicalize_sun(xs)
+        # NOTE(gkanwar): logq is not normalized. This is okay given the fixed
+        # width over sampling iterations.
+        logqb = -torch.sum(xb**2, dim=-1)/(2*width**2)
+        logq = torch.where(width < sigma_cut, logqb, 0.0)
+        return xs, logq
+
+    # Sample eigenangles
+    assert width.shape == (batch_size,), 'width should be batched'
+    xs, old_logq = propose()
+    old_logp = log_sun_hk(xs[..., :-1], width=width, n_max=n_max)
+    for i in range(n_iter):
+        xps, new_logq = propose()
+        # ratio b/w new, old points
+        new_logp = log_sun_hk(xps[..., :-1], width=width, n_max=n_max)
+        log_acc = new_logp - new_logq + old_logq - old_logp
+        # do comparison in F64 just to be safe
+        u = torch.rand(size=log_acc.shape, dtype=torch.float64).log()
+        acc = u < log_acc.to(u)
+        xs[acc] = xps[acc]  # accept / reject step
+        old_logq[acc] = new_logq[acc]
+        old_logp[acc] = new_logp[acc]
+
+    # Sample eigenvectors
+    # V = grab(random_sun_haar_element(batch_size, Nc))
+    # D = np_embed_diag(xs)  # embed diagonal
+    # A = V @ D @ adjoint(V)
+    # return xs, A
+    # TODO(gkanwar): Convert signature to return torch.Tensor?
+    return grab(xs)
