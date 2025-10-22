@@ -25,7 +25,7 @@ def grab(x: Tensor | Any) -> NDArray | Any:
 
 
 def wrap(theta: Tensor | NDArray) -> Tensor | NDArray:
-    """
+    r"""
     Wraps a non-compact input variable into the
     compact interval :math:`[-\pi, \pi]`.
 
