@@ -1,0 +1,14 @@
+[project]
+name = "sun_diffusion"
+description = "Diffusion models for compact variables and SU(N) lattice field theories."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Gurtej Kanwar", email = "gurtejkanwar@gmail.com"},
+    {name = "Octavio Vega", email = "vega00087@gmail.com"},
+]
+dependencies = [
+    "numpy",
+    "torch"
+]
