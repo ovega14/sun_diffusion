@@ -7,7 +7,8 @@ from .sun import random_un_haar_element, embed_diag, matrix_exp, adjoint
 
 __all__ = [
     'VarianceExpandingDiffusion',
-    'VarianceExpandingDiffusionSUN'
+    'VarianceExpandingDiffusionSUN',
+    'PowerDiffusionSUN'
 ]
 
 
@@ -103,6 +104,7 @@ class DiffusionSUN(DiffusionProcess):
         A = V @ embed_diag(xs).to(V) @ adjoint(V)
         return matrix_exp(A) @ U_0, xs, V
 
+
 class VarianceExpandingDiffusionSUN(DiffusionSUN):
     """
     Variance-expanding diffusion on SU(N) group manifold.
@@ -119,7 +121,7 @@ class VarianceExpandingDiffusionSUN(DiffusionSUN):
         return self.sigma ** t
 
     def sigma_func(self, t):
-        """Returns the std dev of the Euclidean heat kernel at time `t`."""
+        """Returns the std dev of the heat kernel at time `t`."""
         sigma = torch.tensor(self.sigma)
         numerator = sigma ** (2*t) - 1
         denominator = 2 * torch.log(sigma)
@@ -128,10 +130,11 @@ class VarianceExpandingDiffusionSUN(DiffusionSUN):
 
 class PowerDiffusionSUN(DiffusionSUN):
     """
-    Variance-expanding diffusion on SU(N) group manifold.
+    Power-law diffusion on SU(N) group manifold.
 
     Args:
         sigma (float): Noise scale
+        alpha (float): Time exponent
     """
     def __init__(self, sigma: float, alpha: float):
         super().__init__()
@@ -143,6 +146,6 @@ class PowerDiffusionSUN(DiffusionSUN):
         return t**self.alpha * self.sigma
 
     def sigma_func(self, t):
-        """Returns the std dev of the Euclidean heat kernel at time `t`."""
+        """Returns the std dev of the heat kernel at time `t`."""
         p = 2*self.alpha+1
         return (t**p / p)**0.5 * torch.tensor(self.sigma)
