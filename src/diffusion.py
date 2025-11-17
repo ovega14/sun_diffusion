@@ -1,3 +1,4 @@
+"""Forward processes and noise schedules for diffusion."""
 import torch
 from abc import abstractmethod, ABC
 
