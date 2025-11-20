@@ -13,9 +13,9 @@ def run_submodule(name: str) -> None:
     print()
 
 
-run_submodule('linalg')
-run_submodule('gens')
-run_submodule('sun')
 run_submodule('action')
-run_submodule('utils')
+run_submodule('gens')
 run_submodule('heat')
+run_submodule('linalg')
+run_submodule('sun')
+run_submodule('utils')
