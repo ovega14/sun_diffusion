@@ -1,6 +1,7 @@
 """Miscellaneous utilities."""
 import torch
 import numpy as np
+import math
 
 from torch import Tensor
 from numpy.typing import NDArray
@@ -78,6 +79,16 @@ def roll(
     else:
         raise TypeError(f'Unsupported type {type(x)}')
 
+
+def logsumexp(x, axis: int = 0):
+    """Bi-compatible wrapper for `logsumexp` in NumPy and PyTorch."""
+    if isinstance(x, torch.Tensor):
+        return torch.logsumexp(x, dim=axis)
+    elif isinstance(x, np.ndarray):
+        return np.logaddexp.reduce(x, axis=axis)
+    raise TypeError(f'Unsupported type {type(x)}')
+
+
 def logsumexp_signed(
     x: NDArray | Tensor,
     signs: NDArray | Tensor,
@@ -100,6 +111,7 @@ def logsumexp_signed(
     else:
         raise TypeError(f'Unsupported type {type(x)}')
 
+
 def _test_logsumexp_signed():
     print('[Testing logsumexp_signed]')
     torch.manual_seed(1234)
@@ -116,4 +128,16 @@ def _test_logsumexp_signed():
     assert torch.allclose(sign_a, sign_b)
     print('[PASSED logsumexp_score]')
 
+
 if __name__ == '__main__': _test_logsumexp_signed()
+
+
+def compute_kl_div(logp, logq):
+    """Computes the reverse KL divergence, assuming model samples x~q."""
+    return (logq - logp).mean()  # OV: torch/np bicompatible
+
+
+def compute_ess(logp, logq):
+    logw = logp - logq
+    log_ess = 2 * logsumexp(logw) - logsumexp(2 * logw)
+    return math.exp(log_ess) / len(logw)
