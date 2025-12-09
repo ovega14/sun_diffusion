@@ -2,7 +2,7 @@
 import torch
 
 from .linalg import trace, adjoint
-from .sun import random_sun_element, random_sun_lattice
+from .sun import random_sun_element, random_sun_lattice, mat_angle
 from .utils import roll
 
 
@@ -57,6 +57,106 @@ def _test_toy_action():
     
 
 if __name__ == '__main__': _test_toy_action()
+
+
+class SUNToyPolynomialAction:
+    """
+    Toy polynomial action over a single SU(N) matrix.
+
+    The polynomial action is defined as in Eqn. (18) of [2008.05456]
+    as a real trace over sums of powers of the matrix.
+
+    Args:
+        beta (float): Inverse coupling strength
+        coeffs (list): List of polynomial coefficients. Default: `[1,0,0]`
+    """
+    def __init__(self,
+        beta: float,
+        coeffs: list[float] = [1., 0., 0.]
+    ):
+        self.__beta = beta
+        self.coeffs = coeffs
+
+    @property
+    def beta(self) -> float:
+        return self.__beta
+
+    def __call__(self, U):
+        Nc = U.shape[-1]
+        action = 0
+        for i, c in enumerate(self.coeffs):
+            action += c * torch.matrix_power(U, i+1)
+        return -(self.beta / Nc) * trace(action).real
+
+    def value_eigs(self, thetas):
+        """
+        Evaluates the action as a function of the eigenangles `thetas`
+        of the SU(N) matrix.
+
+        Args:
+            thetas: Batch of Nc eigenangles of the matrices
+
+        Returns:
+            Batch of action values
+        """
+        Nc = thetas.shape[-1]
+        S = 0
+        for i, c in enumerate(self.coeffs):
+            S += c * torch.cos((i+1) * thetas).sum(-1)
+        return -(self.beta / Nc) * S
+
+    def force_eigs(self, thetas):
+        """
+        Evaluates the minus gradient of the action as a function
+        of the eigenangles `thetas` of the SU(N) matrix.
+
+        Args:
+            thetas: Batch of Nc eigenangles of the matrices
+
+        Returns:
+            Batch of force values
+        """
+        Nc = thetas.shape[-1]
+        F = 0
+        for i, c in enumerate(self.coeffs):
+            F += (i+1) * c * torch.sin((i+1) * thetas)
+        return -(self.beta / Nc) * F
+
+
+def _test_toy_polynomial_action():
+    batch_size = 5
+    Nc = 2
+    U = random_sun_element(batch_size, Nc=2)
+    ths, _, _ = mat_angle(U)
+    ths.requires_grad_()
+
+    beta = 1.0
+    coeffs = [1.0, 1.0, 1.0]
+    action = SUNToyPolynomialAction(beta, coeffs)
+
+    # Check the action
+    print('[Testing SU(N) toy polynomial action on eigs vs U...]')
+    S = action(U)
+    S2 = action.value_eigs(ths)
+    assert torch.allclose(S, S2), \
+        print('[FAILED: Actions evaluated on U vs. eigenangles do not match]')
+    print('[PASSED]')
+
+    # Check the force vs autograd
+    print('[TESTING SU(N) toy polynomial force vs autograd force...]')
+    F = action.force_eigs(ths)
+    grad = torch.autograd.grad(
+        outputs=S2,
+        inputs=ths,
+        grad_outputs=torch.ones_like(S2),
+        create_graph=True
+    )[0]
+    assert torch.allclose(F, -grad), \
+        '[FAILED: Analytic force does not match autograd force]'
+    print('[PASSED]')
+    
+
+if __name__ == '__main__': _test_toy_polynomial_action()
 
 
 class SUNPrincipalChiralAction:
