@@ -1,3 +1,4 @@
+"""Utilities for canonicalizing SU(N) spectra."""
 import numpy as np
 import torch
 from .utils import wrap
@@ -10,22 +11,23 @@ __all__ = [
 ]
 
 
-def canonicalize_su2(thW):
+def canonicalize_su2(thetas: torch.Tensor) -> torch.Tensor:
     r"""
-    Canonicalizes a set of SU(2) eigenangles :math:`(\theta_1, \theta_2)` by
+    Canonicalizes a set of :math:`{\rm SU}(2)` eigenangles 
+    :math:`(\theta_1, \theta_2)` by
 
-        1.) Set :math:`\theta_1 = {\rm wrap}(|\theta|)`,
-        2.) Set :math:`\theta_2 = -\theta_1`.
+        1.) Set :math:`\theta_1 = {\rm wrap}(|\theta|)`
+        2.) Set :math:`\theta_2 = -\theta_1`
 
     Args:
-        thW: Batch of non-canonicalized SU(2) eigenangles.
+        thetas (Tensor): Batch of :math:`{\rm SU}(2)` eigenangles
 
     Returns:
-        Canonicalized batch of eigenangles that sum to zero
+        Canonicalized batch of eigenangles summing to zero
     """
-    thW[..., 0] = wrap(thW[..., 0]).abs()  # map to [0, pi]
-    thW[..., 1] = -thW[..., 0]  # second angle is negative first
-    return thW
+    thetas[..., 0] = wrap(thetas[..., 0]).abs()
+    thetas[..., 1] = -thetas[..., 0]
+    return thetas
 
 
 def canonicalize_su3(thW):
@@ -84,11 +86,11 @@ def canonicalize_su3(thW):
     return torch.transpose(U @ kappa, 0, 1).reshape(thW.shape)
 
 
-def canonicalize_sun(thW):
-    Nc = thW.shape[-1]
+def canonicalize_sun(thetas: torch.Tensor) -> torch.Tensor:
+    """Wrapper for SU(2) and SU(3) canonicalization."""
+    Nc = thetas.shape[-1]
     if Nc == 2:
-        return canonicalize_su2(thW)
-    elif Nc == 3:
-        return canonicalize_su3(thW)
-    else:
-        raise NotImplementedError(f'{Nc =} not supported')
+        return canonicalize_su2(thetas)
+    if Nc == 3:
+        return canonicalize_su3(thetas)
+    raise NotImplementedError(f'SU({Nc}) canonicalization not supported')
