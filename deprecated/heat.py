@@ -4,7 +4,7 @@ import numpy as np
 import itertools
 
 from torch import Tensor
-from typing import Optional
+from ..src import canonicalize_sun, grab
 
 
 def eucl_log_hk(x: Tensor, *, width: Tensor) -> Tensor:
@@ -157,3 +157,50 @@ def sun_score_hk_stable(  # (ovega): this was my alternative 'stable' implementa
     probs = probs.unsqueeze(-1)
     score_full = (probs * grad_unwrapped).sum(dim=1)
     return score_full
+
+
+def sample_sun_hk_old(
+    batch_size: int,
+    Nc: int,
+    *,
+    width: Tensor,
+    n_iter: int = 3,
+    n_max: int = 3
+):
+    """
+    Generates `batch_size` many samples from the SU(Nc) heat
+    kernel of width `width` using importance sampling by
+
+        1.) Sampling eigenangles with `n_iter` iterations of IS
+        2.) Sample random eigenvectors and recomposing with eigenvals
+
+    Args:
+        batch_size (int): Number of samples to generate
+        Nc (int): Dimension of fundamental rep. of SU(Nc)
+        width (float) Standard deviation of heat kernel
+        n_iter (int): Number of IS iterations
+        n_max (int): Max number of terms to include in HK pre-image sum
+    """
+    def propose():
+        """Samples proposal eigenangles from uniform dist."""
+        xs = 2*np.pi*np.random.random(size=(batch_size, Nc))
+        xs[...,-1] = -np.sum(xs[...,:-1])
+        return grab(canonicalize_sun(torch.tensor(xs)))
+    
+    # Sample eigenangles
+    assert width.shape == (batch_size,), 'width should be batched'
+    xs = propose()
+    for i in range(n_iter):
+        xps = propose()
+        # ratio b/w new, old points
+        logp = grab(log_sun_hk(torch.tensor(xps[..., :-1]), width=width, n_max=n_max))
+        logp -= grab(log_sun_hk(torch.tensor(xs[..., :-1]), width=width, n_max=n_max))
+        u = np.log(np.random.random(size=logp.shape))
+        xs[u < logp] = xps[u < logp]  # accept / reject step
+
+    # Sample eigenvectors
+    # V = grab(random_sun_haar_element(batch_size, Nc))
+    # D = np_embed_diag(xs)  # embed diagonal
+    # A = V @ D @ adjoint(V)
+    # return xs, A
+    return xs

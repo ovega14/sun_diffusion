@@ -97,8 +97,8 @@ def sun_hk(
     r"""
     Evaluates the :math:`{\rm SU}(N)` heat kernel on wrapped eigenangles.
 
-    .. note:: This function assumed that the input only includes the
-    :math:`N - 1` independent eigenangles.
+    .. note:: This function assumes the input only includes the :math:`N-1`
+    independent eigenangles.
 
     Args:
         thetas (Tensor): Wrapped eigenangles, shaped `[B, Nc-1]`
@@ -113,21 +113,18 @@ def sun_hk(
 
 
 def _sun_score_hk_unwrapped(xs: Tensor, *, width: Tensor) -> Tensor:
-    """
-    Computes the analytical score function for the SU(Nc) heat kernel over the 
-    unwrapped (non-compact) space of eigenangles.
+    r"""
+    Computes the analytical score function for the :math:`{\rm SU}(N)` HK over
+    unwrapped eigenangles.
 
-    .. note:: Assumes that `xs` only includes the Nc-1 independent eigenangles.
-
-    .. note:: This implementation returns the product of the score with the 
-    heat kernel, dK/dx = s(x) * K. 
+    .. note:: Assumes `xs` only includes the :math:`N-1` independent angles.
 
     Args:
         xs (Tensor): Batch of unwrapped eigenangles, shaped `[B, Nc-1]`
-        width (Tensor): Std deviation of the heat kernel, shaped `[B]`
+        width (Tensor): Standard deviation of the heat kernel, shaped `[B]`
 
     Returns:
-        (Tensor) Gradient of the SU(Nc) heat kernel w.r.t. eigenangles
+        Gradient of the log HK w.r.t. `xs`
     """
     xn = -torch.sum(xs, dim=-1, keepdims=True)
     xs = torch.cat([xs, xn], dim=-1)  # tr(X) = 0
@@ -146,36 +143,32 @@ def _sun_score_hk_unwrapped(xs: Tensor, *, width: Tensor) -> Tensor:
     return grad_meas + grad_weight
 
 
-def sun_score_hk(
-    thetas: Tensor,
-    *,
-    width: float,
-    n_max: Optional[int] = 3
-) -> Tensor:
-    """
-    Computes the analytical score function for the wrapped
-    SU(N) heat kernel of width `width` as a function of
-    wrapped SU(N) eigenangles.
+def sun_score_hk(thetas: Tensor, *, width: Tensor, n_max: int = 3) -> Tensor:
+    r"""
+    Computes the analytical score function for the wrapped :math:`{\rm SU}(N)`
+    heat kernel over eigenangles `thetas`.
+
+    .. note:: This function assumes the input only includes the :math:`N-1` 
+    independent eigenangles.
 
     Args:
-        thetas (Tensor): Wrapped SU(N) eigenangles
-        width (float): Standard deviation of the heat kernel
-        n_max (int): Max number of pre-image sum correction terms to include
+        thetas (Tensor): Wrapped eigenangles, shaped `[B, Nc-1]`
+        width (Tensor): Standard deviation of the heat kernel
+        n_max (int): Max number of pre-image sum terms to include. Default: 3
 
     Returns:
-        Analytical gradient of the SU(N) heat kernel log-density
+        Analytical gradient of the wrapped log HK
     """
-    total = 0
-    lattice_shifts = itertools.product(range(-n_max, n_max+1), repeat=thetas.shape[-1])
-    # K = sun_hk(thetas, width=width, eig_meas=False)
+    shifts = itertools.product(range(-n_max, n_max+1), repeat=thetas.shape[-1])
     logK = log_sun_hk(thetas, width=width, eig_meas=False)
-    # Sum over periodic lattice shifts to account for pre-images
-    for ns in lattice_shifts:
-        ns = torch.tensor(ns)
-        xs = thetas + 2*np.pi * ns
-        # Ki = _sun_hk_unwrapped(xs, width=width, eig_meas=False)
+    
+    # Sum over pre-images
+    total = 0
+    for ns in shifts:
+        xs = thetas + 2*np.pi * torch.tensor(ns)
         logKi, si = _log_sun_hk_unwrapped(xs, width=width, eig_meas=False)
-        total = total + (si * (logKi-logK).exp())[...,None] * _sun_score_hk_unwrapped(xs, width=width)
+        exp_factor = (si * torch.exp(logKi - logK))[..., None]
+        total = total + exp_factor * _sun_score_hk_unwrapped(xs, width=width)
     return total
 
 
@@ -183,19 +176,26 @@ def sun_score_hk_autograd(
     thetas: Tensor,
     *,
     width: float,
-    n_max: Optional[int] = 3
+    n_max: int = 3
 ) -> Tensor:
-    """
-    Computes the score function for the wrapped SU(N) heat kernel by automatic
-    differentiation of the log density in the eigenangles `thetas`.
+    r"""
+    Computes the score function for the wrapped :math:`{\rm SU}(N)` heat kernel
+    via automatic differentiation of :math:`K` in `thetas`, followed by 
+    division by :math:`K`.
+
+    This function uses autograd to compute the score **indirectly** as
+
+    .. math::
+
+        s(\theta) = \frac{\nabla K(\theta)}{K(\theta)}
 
     Args:
-        thetas (Tensor): Wrapped SU(N) eigenangles
+        thetas (Tensor): Wrapped eigenangles, shaped `[B, Nc-1]`
         width (float): Standard deviation of the heat kernel
-        n_max (int): Max number of pre-image sum correction terms to include
+        n_max (int): Max number of pre-image sum terms to include. Default: 3
 
     Returns:
-        Autograd derivative of the SU(N) heat kernel log-density
+        Autograd derivative of the HK divided by :math:`K`
     """
     if len(thetas.shape) != 2:
         raise ValueError('Expects batched thetas')
@@ -212,19 +212,25 @@ def sun_score_hk_autograd_v2(
     thetas: Tensor,
     *,
     width: float,
-    n_max: Optional[int] = 3
+    n_max: int = 3
 ) -> Tensor:
-    """
-    Computes the score function for the wrapped SU(N) heat kernel by automatic
-    differentiation of the log density in the eigenangles `thetas`.
+    r"""
+    Computes the score function for the wrapped :math:`{\rm SU}(N)` heat kernel
+    via automatic differentiation of :math:`\log K` in `thetas`.
+
+    This function uses autograd to compute the score **directly** as
+
+    .. math::
+
+        s(\theta) = \nabla \log K(\theta)
 
     Args:
-        thetas (Tensor): Wrapped SU(N) eigenangles
+        thetas (Tensor): Wrapped eigenangles, shaped `[B, Nc-1]`
         width (float): Standard deviation of the heat kernel
-        n_max (int): Max number of pre-image sum correction terms to include
+        n_max (int): Max number of pre-image sum terms to include. Default: 3
 
     Returns:
-        Autograd derivative of the SU(N) heat kernel log-density
+        Autograd derivative of the HK log-density
     """
     if len(thetas.shape) != 2:
         raise ValueError('Expects batched thetas')
@@ -266,83 +272,36 @@ def _test_sun_score_hk():
 if __name__ == '__main__': _test_sun_score_hk()
 
 
-def sample_sun_hk_old(
-    batch_size: int,
-    Nc: int,
-    *,
-    width: Tensor,
-    n_iter: Optional[int] = 3,
-    n_max: Optional[int] = 3
-):
-    """
-    Generates `batch_size` many samples from the SU(Nc) heat
-    kernel of width `width` using importance sampling by
-
-        1.) Sampling eigenangles with `n_iter` iterations of IS
-        2.) Sample random eigenvectors and recomposing with eigenvals
-
-    Args:
-        batch_size (int): Number of samples to generate
-        Nc (int): Dimension of fundamental rep. of SU(Nc)
-        width (float) Standard deviation of heat kernel
-        n_iter (int): Number of IS iterations
-        n_max (int): Max number of terms to include in HK pre-image sum
-    """
-    def propose():
-        """Samples proposal eigenangles from uniform dist."""
-        xs = 2*np.pi*np.random.random(size=(batch_size, Nc))
-        xs[...,-1] = -np.sum(xs[...,:-1])
-        return grab(canonicalize_sun(torch.tensor(xs)))
-    
-    # Sample eigenangles
-    assert width.shape == (batch_size,), 'width should be batched'
-    xs = propose()
-    for i in range(n_iter):
-        xps = propose()
-        # ratio b/w new, old points
-        logp = grab(log_sun_hk(torch.tensor(xps[..., :-1]), width=width, n_max=n_max))
-        logp -= grab(log_sun_hk(torch.tensor(xs[..., :-1]), width=width, n_max=n_max))
-        u = np.log(np.random.random(size=logp.shape))
-        xs[u < logp] = xps[u < logp]  # accept / reject step
-
-    # Sample eigenvectors
-    # V = grab(random_sun_haar_element(batch_size, Nc))
-    # D = np_embed_diag(xs)  # embed diagonal
-    # A = V @ D @ adjoint(V)
-    # return xs, A
-    return xs
-
 def sample_sun_hk(
     batch_size: int,
     Nc: int,
     *,
     width: Tensor,
-    n_iter: Optional[int] = 3,
-    n_max: Optional[int] = 3
+    n_iter: int = 3,
+    n_max: int = 3
 ):
-    """
-    Generates `batch_size` many samples from the SU(Nc) heat
-    kernel of width `width` using importance sampling by
-
-        1.) Sampling eigenangles with `n_iter` iterations of IS
-        2.) Sample random eigenvectors and recomposing with eigenvals
+    r"""
+    Samples from the :math:`{\rm SU}(N)` heat kernel with importance sampling.
 
     Args:
         batch_size (int): Number of samples to generate
         Nc (int): Dimension of fundamental rep. of SU(Nc)
         width (float) Standard deviation of heat kernel
-        n_iter (int): Number of IS iterations
-        n_max (int): Max number of terms to include in HK pre-image sum
+        n_iter (int): Number of IS iterations. Default: 3
+        n_max (int): Max number of pre-image sum terms to include. Default: 3
+
+    Returns:
+        xs: Batch of eigenangles shaped `[B, Nc]` from the heat kernel
     """
     def propose():
         """Samples proposal eigenangles from patched measure."""
         sigma_cut = 0.5
         xa = 2*np.pi*torch.rand(size=(batch_size, Nc))
-        xa[...,-1] = -torch.sum(xa[...,:-1], dim=-1)
-        xb = width[...,None] * torch.randn(size=(batch_size, Nc))
+        xa[..., -1] = -torch.sum(xa[..., :-1], dim=-1)
+        xb = width[..., None] * torch.randn(size=(batch_size, Nc))
         xb -= torch.mean(xb, dim=-1, keepdim=True)
-        assert torch.all((width[...,None] > sigma_cut) | (xb.abs() < np.pi))
-        xs = torch.where(width[...,None] < sigma_cut, xb, xa)
+        assert torch.all((width[..., None] > sigma_cut) | (xb.abs() < np.pi))
+        xs = torch.where(width[..., None] < sigma_cut, xb, xa)
         xs = canonicalize_sun(xs)
         # NOTE(gkanwar): logq is not normalized. This is okay given the fixed
         # width over sampling iterations.
