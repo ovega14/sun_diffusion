@@ -47,7 +47,7 @@ class SUNToyAction(Action):
         return -(self.beta / Nc) * trace(U).real
 
 
-def apply_gauge_transform(
+def apply_conjugation(
     U: torch.Tensor, 
     V: Optional[torch.Tensor] = None
 ) -> torch.Tensor:
@@ -62,7 +62,7 @@ def _test_toy_action():
     batch_size = 2
     Nc = 2
     U = random_sun_element(batch_size, Nc=Nc)
-    gU = apply_conj(U)
+    gU = apply_conjugation(U)
 
     action = SUNToyAction(1.0)
     S = action(U)
