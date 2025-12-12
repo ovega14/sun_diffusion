@@ -10,6 +10,7 @@ from .utils import roll
 
 __all__ = [
     'SUNToyAction',
+    'SUNToyPolynomialAction',
     'SUNPrincipalChiralAction'
 ]
 
