@@ -10,10 +10,19 @@ import numpy as np
 import itertools
 
 from torch import Tensor
-from typing import Optional
 
 from .utils import grab, logsumexp_signed
 from .canon import canonicalize_sun
+
+
+__all__ = [
+    'log_sun_hk',
+    'sun_hk',
+    'sun_score_hk',
+    'sun_score_hk_autograd',
+    'sun_score_hk_autograd_v2',
+    'sample_sun_hk'
+]
 
 
 def eucl_log_hk(x: Tensor, *, width: Tensor) -> Tensor:
@@ -73,7 +82,7 @@ def log_sun_hk(
     log_values = []
     signs = []
     
-    # Sum over periodic lattice shifts to account for pre-images
+    # Sum over pre-images
     shifts = itertools.product(range(-n_max, n_max+1), repeat=thetas.shape[-1])
     for ns in shifts:
         ns = torch.tensor(ns)
