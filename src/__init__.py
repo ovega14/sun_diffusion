@@ -10,6 +10,9 @@ from .gens import *
 from . import heat
 from .heat import *
 
+from . import irreps
+from .irreps import *
+
 from . import linalg
 from .linalg import *
 
