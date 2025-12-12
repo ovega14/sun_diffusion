@@ -13,13 +13,13 @@ _default_dtype = torch.float64  # for real tensors
 _default_complex_dtype = torch.complex128  # default 64 on GPU; complex128 on CPU
 
 
-def set_device(device: Optional[str] = None, cuda_id: Optional[int]  = 0) -> None:
+def set_device(device: Optional[str] = None, cuda_id: int = 0) -> None:
     """
     Set global device and default dtype for torch.
 
     Args:
-        device (str): 'cpu' or 'cuda'. If None, defaults to 'cuda' if available.
-        cuda_id (int): Which CUDA device to use.
+        device (str): 'cpu' or 'cuda'. If None, defaults to `cuda` if available
+        cuda_id (int): Which CUDA device to use
     """
     global _device, _cuda_id, _default_dtype, _default_complex_dtype
 
@@ -49,15 +49,18 @@ def get_device() -> torch.device:
     return _device
 
 
-def get_dtype(complex: bool = False) -> torch.dtype:
+def get_dtype(is_complex: bool = False) -> torch.dtype:
     """Return the current default dtype (complex or real)."""
-    return _default_complex_dtype if complex else _default_dtype
+    return _default_complex_dtype if is_complex else _default_dtype
 
-def set_dtype(dtype: torch.dtype):
+
+def set_dtype(dtype: torch.dtype) -> None:
+    """Sets the default dtype to `dtype`."""
     global _default_dtype
     torch.set_default_dtype(dtype)
     _default_dtype = torch.get_default_dtype()
     _default_complex_dtype = torch.promote_types(_default_dtype, torch.complex64)
+
 
 def device_name() -> str:
     """Get human-readable name for current device."""
