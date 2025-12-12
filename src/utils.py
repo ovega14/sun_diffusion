@@ -21,20 +21,19 @@ def grab(x: Tensor | Any) -> NDArray | Any:
     """
     if hasattr(x, 'detach'):
         return x.detach().cpu().numpy()
-    else:
-        return x
+    return x
 
 
 def wrap(theta: Tensor | NDArray) -> Tensor | NDArray:
     r"""
-    Wraps a non-compact input variable into the
-    compact interval :math:`[-\pi, \pi]`.
+    Wraps a non-compact input variable into the compact interval 
+    :math:`[-\pi, \pi]`.
 
     Args:
         theta (Tensor, NDArray): Non-compact, real-valued input
 
     Returns:
-        Input wrapped around [-pi, pi]
+        Input folded into :math:`[-\pi, \pi]`
     """    
     return (theta + np.pi) % (2*np.pi) - np.pi
 
@@ -62,10 +61,10 @@ def roll(
     Bi-compatible wrapper for the `roll` function in NumPy and PyTorch.
     
     Rolls a NumPy array or PyTorch tensor around a given dimension or set of
-    dimensions given in `dims` by corresponding amount(s) specified in `shifts`.
+    dimensions given in `dims` by corresponding amount specified in `shifts`.
 
     Args:
-        x (Tensor, NDArray): Array or tensor object to roll
+        x (Tensor, NDArray): Array or tensor to roll
         shifts (int, tuple): Shift amount(s), where negative values shift right
         dims (int, tuple): Axes or dims along which to shift
 
@@ -76,8 +75,7 @@ def roll(
         return torch.roll(x, shifts=shifts, dims=dims)
     elif isinstance(x, np.ndarray):
         return np.roll(x, shift=shifts, axis=dims)
-    else:
-        raise TypeError(f'Unsupported type {type(x)}')
+    raise TypeError(f'Unsupported type {type(x)}')
 
 
 def logsumexp(x, axis: int = 0):
@@ -90,26 +88,40 @@ def logsumexp(x, axis: int = 0):
 
 
 def logsumexp_signed(
-    x: NDArray | Tensor,
-    signs: NDArray | Tensor,
+    x: Tensor,
+    signs: Tensor,
     axis: int
-) -> (NDArray | Tensor, NDArray | Tensor):
+) -> (Tensor, Tensor):
+    """
+    Computes the log-sum-exp of `x`, accounting for element signs.
+
+    Args:
+        x (Tensor): Logarithms of absolute values
+        signs (Tensor): Signs for each element of `x` (+1 / -1)
+        axis (int): Axis along which to compute the log-sum-exp
+
+    Returns:
+        out_logs (Tensor): Logarithm of the signed sum
+        out_signs (Tensor): Sign of the sum (+1 or -1)
+    """
     ind_pos = (signs > 0)
     ind_neg = ~ind_pos
-    if isinstance(x, torch.Tensor):
-        x_pos = torch.where(ind_pos, x, -float('inf'))
-        x_neg = torch.where(ind_neg, x, -float('inf'))
-        x_pos = torch.logsumexp(x_pos, dim=axis)
-        x_neg = torch.logsumexp(x_neg, dim=axis)
-        out_signs = torch.where(x_pos > x_neg, torch.ones_like(x_pos), -torch.ones_like(x_pos))
-        out_logs = torch.where(
-            x_pos > x_neg, x_pos + torch.log(1.0 - torch.exp(x_neg-x_pos)),
-            x_neg + torch.log(1.0 - torch.exp(x_pos-x_neg)))
-        return out_logs, out_signs
-    elif isinstance(x, np.ndarray):
-        raise NotImplementedError()
-    else:
-        raise TypeError(f'Unsupported type {type(x)}')
+    
+    x_pos = torch.where(ind_pos, x, -float('inf'))
+    x_neg = torch.where(ind_neg, x, -float('inf'))
+    
+    x_pos = torch.logsumexp(x_pos, dim=axis)
+    x_neg = torch.logsumexp(x_neg, dim=axis)
+    
+    out_logs = torch.where(
+        x_pos > x_neg, 
+        x_pos + torch.log(1.0 - torch.exp(x_neg-x_pos)),
+        x_neg + torch.log(1.0 - torch.exp(x_pos-x_neg)))
+    out_signs = torch.where(
+        x_pos > x_neg, 
+        torch.ones_like(x_pos), 
+        -torch.ones_like(x_pos))
+    return out_logs, out_signs
 
 
 def _test_logsumexp_signed():
@@ -138,6 +150,7 @@ def compute_kl_div(logp, logq):
 
 
 def compute_ess(logp, logq):
+    """Computes the effective sample size from target and model likelihoods."""
     logw = logp - logq
     log_ess = 2 * logsumexp(logw) - logsumexp(2 * logw)
     return math.exp(log_ess) / len(logw)
