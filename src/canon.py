@@ -1,6 +1,7 @@
-"""Utilities for canonicalizing SU(N) spectra."""
-import numpy as np
+"""Utilities for canonicalizing SU(N) eigenangles."""
 import torch
+import numpy as np
+
 from .utils import wrap
 
 
@@ -30,38 +31,34 @@ def canonicalize_su2(thetas: torch.Tensor) -> torch.Tensor:
     return thetas
 
 
-def canonicalize_su3(thW):
+def canonicalize_su3(thetas: torch.Tensor) -> torch.Tensor:
     r"""
-    Canonicalizes a set of SU(3) eigenangles :math:`(\theta_1, theta_2, \theta_3)` by
+    Canonicalizes a set of :math:`{\rm SU}(3)` eigenangles `thetas`.
 
-        1.) Project onto hyperplane defined by :math:`\sum_i \theta_i = 0`,
-        2.) Wrap onto canonical hexagon centered at the identity
-        3.) Map into coordinates :math:`(a, b, c)` from angles :math:`\theta_i`
-        4.) Impose hexagonal constraints by wrapping :math:`a, b, c` into [-0.5, 0.5]
+    Given eigenangles :math:`(\theta_1, theta_2, \theta_3)`, the algorithm for
+    canonicalization is
+
+        1.) Project onto hyperplane defined by :math:`\sum_i \theta_i = 0`
+        2.) Map into coordinates :math:`(a, b, c)`
+        3.) Wrap onto canonical hexagon centered at the identity
+        4.) Impose hexagonal constraints by wrapping into [-0.5, 0.5]
         5.) Round and shift into the centered hexagon
 
     Args:
-        thW: Batch of non-canonicalzied SU(3) eigenangles
+        thetas (Tensor): Batch of :math:`{\rm SU}(3)` eigenangles
 
     Returns:
-        Canonicalized batch of SU(3) eigenangles summing to zero
-    
+        Canonicalized batch of eigenangles summing to zero
     """
-    thW[..., -1] -= torch.sum(thW, dim=-1)  # sum_i theta_i = 0
-    v = thW.reshape(-1, 3)
+    thetas[..., -1] -= torch.sum(thetas, dim=-1)  # sum_i theta_i = 0
 
-    U = 2*np.pi * torch.tensor([  # map (a,b,c) -> v = (th1,th2,th3)
-        [1, 0, -1],
-        [0, -1, 1],
-        [-1, 1, 0]
-    ])
-    U_inv = torch.tensor([  # map v -> (a,b,c)
+    U_inv = torch.tensor([  # maps v -> (a, b, c)
         [1, 0, -1],
         [0, -1, 1],
         [-1, 1, 0]
     ]) / (6*np.pi)
-
-    kappa = U_inv @ torch.transpose(v, 0, 1)
+    v = thetas.reshape(-1, 3)
+    kappa = U_inv @ torch.transpose(v, 0, 1)  # ij, jb -> ib
     a, b, c, = kappa[0], kappa[1], kappa[2]
 
     k = (b + c) / 2
@@ -82,8 +79,13 @@ def canonicalize_su3(thW):
     a -= torch.round(a)
     c -= torch.round(c - (a + b)/2)
 
+    U = 2*np.pi * torch.tensor([  # maps (a, b, c) -> v = (th1, th2, th3)
+        [1, 0, -1],
+        [0, -1, 1],
+        [-1, 1, 0]
+    ])
     kappa = torch.stack([a, b, c], dim=0)
-    return torch.transpose(U @ kappa, 0, 1).reshape(thW.shape)
+    return torch.transpose(U @ kappa, 0, 1).reshape(thetas.shape)
 
 
 def canonicalize_sun(thetas: torch.Tensor) -> torch.Tensor:
