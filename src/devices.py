@@ -70,5 +70,9 @@ def device_name() -> str:
 
 
 def summary() -> str:
-    """Return a summary string of the current device setup."""
-    return f'Using device: {_device} ({device_name()}) with dtype: {torch.get_default_dtype()}'
+    """Returns a summary string of the current device setup."""
+    return (
+        f'Using device: {_device} '
+        f'({device_name()}) '
+        f'with dtype: {_default_dtype}'
+    )
