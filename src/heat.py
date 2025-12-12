@@ -1,8 +1,9 @@
 """
-A note on conventions: For now, we use `width` to denote what was previously
-called `sigma` since the heat kernel standard deviation can sometimes be a
-function of time or depend directly on time itself. Sigma can be a related or
-unrelated parameter elsewhere.
+Module for heat kernel evaluations and analytical score functions.
+
+Notation: We use `width` to denote the standard deviation of the heat kernel
+instead of `sigma`, since this is used as a parameter label elsewhere. We often
+abbreviate the heat kernel to HK.
 """
 import torch
 import numpy as np
@@ -15,9 +16,6 @@ from .utils import grab, logsumexp_signed
 from .canon import canonicalize_sun
 
 
-# =============================================================================
-#  Euclidean Heat Kernel
-# =============================================================================
 def eucl_log_hk(x: Tensor, *, width: Tensor) -> Tensor:
     """Log density of Euclidean heat kernel, ignoring normalization."""
     dims = tuple(range(1, x.ndim))
@@ -29,21 +27,18 @@ def eucl_score_hk(x: Tensor, *, width: Tensor):
     return -x / width[..., None]**2
 
 
-# =============================================================================
-#  SU(N) Heat Kernel
-# =============================================================================
 def _sun_hk_meas_J(delta):
-    """Measure term Jij on Hermitian matrix eigenvalue differences."""
+    """Measure term :math:`J_{ij}` on eigenvalue differences `delta`."""
     return 2 * torch.sin(delta / 2)
 
 
 def _sun_hk_meas_D(delta):
-    """Measure term Dij on Hermitian matrix eigenvalue differences."""
+    """Measure term :math:`D_{ij}` on eigenvalue differences `delta`."""
     return delta
 
 
-def _log_sun_hk_unwrapped(xs: Tensor, *, width, eig_meas=True):
-    """Computes the SU(N) log Heat Kernel over the unwrapped eigenangles."""
+def _log_sun_hk_unwrapped(xs: Tensor, *, width: Tensor, eig_meas: bool = True):
+    r"""Computes the :math:`{\rm SU}(N)` log HK over unwrapped eigenangles."""
     xn = -torch.sum(xs, dim=-1, keepdims=True)
     xs = torch.cat([xs, xn], dim=-1)
 
@@ -62,7 +57,7 @@ def _log_sun_hk_unwrapped(xs: Tensor, *, width, eig_meas=True):
         _sun_hk_meas_D(delta_x).sign() *
         _sun_hk_meas_J(delta_x).sign(), dim=-1)
 
-    # Gaussian (Euclidean) heat kernel weight
+    # Gaussian (Euclidean) HK weight
     log_weight = eucl_log_hk(xs, width=width)
     return log_meas + log_weight, sign
 
@@ -105,16 +100,16 @@ def log_sun_hk(
     thetas: Tensor,
     *,
     width: Tensor,
-    n_max: Optional[int] = 3,
-    eig_meas: Optional[bool] = True
+    n_max: int = 3,
+    eig_meas: bool = True
 ) -> Tensor:
-    """Computes the SU(N) log Heat Kernel over wrapped eigenangles."""
+    r"""Computes the :math:`{\rm SU}(N)` log HK over wrapped eigenangles."""
     log_values = []
     signs = []
     
     # Sum over periodic lattice shifts to account for pre-images
-    lattice_shifts = itertools.product(range(-n_max, n_max+1), repeat=thetas.shape[-1])
-    for ns in lattice_shifts:
+    shifts = itertools.product(range(-n_max, n_max+1), repeat=thetas.shape[-1])
+    for ns in shifts:
         ns = torch.tensor(ns)
         xs = thetas + 2*np.pi * ns
         log_value, sign = _log_sun_hk_unwrapped(xs, width=width, eig_meas=eig_meas)
@@ -130,21 +125,23 @@ def sun_hk(
     thetas: Tensor,
     *,
     width: Tensor,
-    n_max: Optional[int] = 3,
-    eig_meas: Optional[bool] = True
+    n_max: int = 3,
+    eig_meas: bool = True
 ) -> Tensor:
-    """
-    Computes the SU(N) heat kernel of width `width` over
-    the wrapped space of eigenangles.
+    r"""
+    Evaluates the :math:`{\rm SU}(N)` heat kernel on wrapped eigenangles.
+
+    .. note:: This function assumed that the input only includes the
+    :math:`N - 1` independent eigenangles.
 
     Args:
-        thetas (Tensor): Wrapped SU(N) eigenangles
+        thetas (Tensor): Wrapped eigenangles, shaped `[B, Nc-1]`
         width (Tensor): Standard deviation of the heat kernel, batched
-        n_max (int): Max number of pre-image sum correction terms to include
-        eig_meas (bool): Weather to include the measure term over the eigenangles
+        n_max (int): Max number of pre-image sum terms to include. Default: 3
+        eig_meas (bool): Weather to include Haar measure term. Default: `True`
 
     Returns:
-        SU(N) heat kernel evaluated at the input angles `thetas`
+        :math:`{\rm SU}(N)` heat kernel evaluated on the angles `thetas`
     """
     return log_sun_hk(thetas, width=width, n_max=n_max, eig_meas=eig_meas).exp()
 
