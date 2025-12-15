@@ -16,7 +16,7 @@ __all__ = [
 
 
 class Action(ABC):
-    """Abstract base class for all physics actions."""
+    """Abstract base class for all physics actions."""    
     @abstractmethod
     def __call__(self, cfgs):
         """Evaluates the action on a batch of configurations `cfgs`."""
@@ -39,6 +39,7 @@ class SUNToyAction(Action):
 
     @property
     def beta(self) -> float:
+        """Retrieves the coupling strength `beta`."""
         return self.__beta
 
     def __call__(self, U: torch.Tensor) -> torch.Tensor:
@@ -48,27 +49,17 @@ class SUNToyAction(Action):
         return -(self.beta / Nc) * trace(U).real
 
 
-def apply_conjugation(
-    U: torch.Tensor, 
-    V: Optional[torch.Tensor] = None
-) -> torch.Tensor:
-    """Applies a unitary conjugation to an input element `U`."""
-    if V is None:
-        V = random_sun_element(U.size(0), Nc=U.size(-1))
-    return V @ U @ adjoint(V)
-
-
 def _test_toy_action():
     print('[Testing SUNToyAction]')
     batch_size = 2
     Nc = 2
     U = random_sun_element(batch_size, Nc=Nc)
-    gU = apply_conjugation(U)
+    V = random_sun_element(batch_size, Nc=Nc)
 
     action = SUNToyAction(1.0)
     S = action(U)
-    Sg = action(gU)
-    assert torch.allclose(S, Sg), '[FAILED: Action not conjugation-invariant]'
+    Sp = action(V @ U @ adjoint(V))
+    assert torch.allclose(S, Sp), '[FAILED: Action not conjugation-invariant]'
     print('[PASSED]')
     
 
@@ -218,6 +209,7 @@ class SUNPrincipalChiralAction(Action):
 
     @property
     def beta(self) -> float:
+        """Retrieves the coupling strength `beta`."""
         return self.__beta
 
     def __call__(self, U):
