@@ -1,5 +1,6 @@
 """Forward processes and noise schedules for diffusion."""
 import torch
+import math
 from abc import abstractmethod, ABC
 
 from .heat import sample_sun_hk
@@ -38,8 +39,15 @@ class DiffusionProcess(torch.nn.Module, ABC):
 
 
 class VarianceExpandingDiffusion(DiffusionProcess):
-    """
+    r"""
     Variance-expading diffusion process.
+
+    Noise schedule is given by :math:`g(t) = \sigma^t`, which yields a
+    diffusivity of
+
+    .. math::
+
+        \sigma(t) = \sqrt{\frac{\kappa^{2t} - 1}{2 \log\kappa}}.
 
     Args:
         sigma (float): Noise scale
@@ -48,67 +56,84 @@ class VarianceExpandingDiffusion(DiffusionProcess):
         super().__init__()
         self.sigma = sigma
 
-    def noise_coeff(self, t):
-        """Returns the noise (diffusion) coefficient g(t) at time `t`."""
+    def noise_coeff(self, t: torch.Tensor) -> torch.Tensor:
+        """Returns the noise coefficient :math:`g(t)` at time `t`."""
         return self.sigma ** t
 
-    def sigma_func(self, t):
-        """Returns the std dev of the Euclidean heat kernel at time `t`."""
-        sigma = torch.tensor(self.sigma)
-        numerator = sigma ** (2*t) - 1
-        denominator = 2 * torch.log(sigma)
-        return (numerator / denominator) ** 0.5
+    def sigma_func(self, t: torch.Tensor) -> torch.Tensor:
+        """Returns the width of the heat kernel at time `t`."""
+        num = sigma ** (2*t) - 1
+        den = 2 * math.log(sigma)
+        return (num / den) ** 0.5
 
-    def diffuse(self, x_0, t):
+    def diffuse(self, x_0: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         r"""
-        Diffuses input data `x_0` to a noise level projected
-        forward to time step `t` according to the variance-expanding
-        framework, where
+        Diffuses input `x_0` forward to time `t`, where
 
         .. math::
 
-            x_0 \rightarrow x_t = x_0 + \sigma_t \epsilon
+            x_0 \rightarrow x_t = x_0 + \sigma_t \eta
+
+        and :math:`\eta \sim \mathcal{N}(0, \mathbb{I})`.
 
         Args:
             x_0 (Tensor): Input data
             t (Tensor): Time step to which to diffuse
         """
         sigma_t = self.sigma_func(t)[:, None]
-        eps = torch.randn_like(x_0)
-        x_t = x_0 + sigma_t * eps
+        eta = torch.randn_like(x_0)
+        x_t = x_0 + sigma_t * eta
         return x_t
-
+    
 
 class DiffusionSUN(DiffusionProcess):
-    """Provides SU(N) diffusion sampling assuming subclasses define sigma_func(t)."""
-    def diffuse(self, U_0, t, n_iter=3):
+    r"""
+    Provides :math:`{\rm SU}(N)` diffusion sampling assuming subclasses define
+    `sigma_func(t)`.
+
+    Abstract base class.
+    """
+    def diffuse(self, 
+        U_0: torch.Tensor, 
+        t: torch.Tensor, 
+        n_iter: int = 3
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         r"""
-        Diffuses input data `U_0` to a noise level projected
-        forward to time step `t` according to the variance-expanding
-        framework, where
+        Diffuses input data `U_0` to time `t`, where
 
         .. math::
 
             U_0 \rightarrow U_t = exp(1j A(\sigma_t)) U_0
 
+        and the noising matrix :math:`A(\sigma_t)` is constructed from samples
+        from the :math:`{\rm SU}(N)` spectral heat kernel at time `t`.
+
         Args:
-            U_0 (Tensor): Input data
+            U_0 (Tensor): Input data as :math:`{\rm SU}(N)` matrices
             t (Tensor): Time step to which to diffuse
+            n_iter (int): Number of iterations for HK sampling. Default: 3
+
+        Returns:
+            U_t (Tensor): Matrices diffused to time `t`
+            xs (Tensor): Eigenangles sampled from the heat kernel
+            V (Tensor): Random Haar-uniform eigenvectors in :math:`{\rm U}(N)`
         """
         batch_size = U_0.size(0)
         Nc, Nc_ = U_0.shape[-2:]
         assert Nc == Nc_, \
             f'U_0 must be a Nc x Nc matrix; got {Nc} x {Nc_}'
+        
         sigma_t = self.sigma_func(t)
-        xs = torch.tensor(sample_sun_hk(batch_size, Nc, width=sigma_t, n_iter=n_iter))
+        xs = sample_sun_hk(batch_size, Nc, width=sigma_t, n_iter=n_iter)
         V = random_un_haar_element(batch_size, Nc=Nc)
-        A = V @ embed_diag(xs).to(V) @ adjoint(V)
-        return matrix_exp(A) @ U_0, xs, V
+        A = V @ embed_diag(torch.tensor(xs)).to(V) @ adjoint(V)
+        U_t = matrix_exp(A) @ U_0
+        return U_t, xs, V
 
 
 class VarianceExpandingDiffusionSUN(DiffusionSUN):
-    """
-    Variance-expanding diffusion on SU(N) group manifold.
+    r"""
+    Variance-expanding diffusion on the :math:`{\rm SU}(N)` group manifold.
 
     Args:
         sigma (float): Noise scale
@@ -117,21 +142,27 @@ class VarianceExpandingDiffusionSUN(DiffusionSUN):
         super().__init__()
         self.sigma = sigma
 
-    def noise_coeff(self, t):
-        """Returns the noise (diffusion) coefficient g(t) at time `t`."""
+    def noise_coeff(self, t: torch.Tensor) -> torch.Tensor:
+        """Returns the noise coefficient :math:`g(t)` at time `t`."""
         return self.sigma ** t
 
-    def sigma_func(self, t):
-        """Returns the std dev of the heat kernel at time `t`."""
-        sigma = torch.tensor(self.sigma)
-        numerator = sigma ** (2*t) - 1
-        denominator = 2 * torch.log(sigma)
-        return (numerator / denominator) ** 0.5
+    def sigma_func(self, t: torch.Tensor) -> torch.Tensor:
+        """Returns the width of the heat kernel at time `t`."""
+        num = sigma ** (2*t) - 1
+        den = 2 * math.log(sigma)
+        return (num / den) ** 0.5
 
 
 class PowerDiffusionSUN(DiffusionSUN):
-    """
-    Power-law diffusion on SU(N) group manifold.
+    r"""
+    Power-law diffusion on the :math:`{\rm SU}(N)` group manifold.
+
+    The noise schedule is defined as :math:`g(t) = \kappa t^\alpha`, which
+    results in a diffusivity of
+
+    .. math::
+
+        \sigma(t) = \sigma \sqrt{\frac{t^{2\alpha + 1}}{2\alpha + 1}}.
 
     Args:
         sigma (float): Noise scale
@@ -142,11 +173,11 @@ class PowerDiffusionSUN(DiffusionSUN):
         self.sigma = sigma
         self.alpha = alpha
 
-    def noise_coeff(self, t):
-        """Returns the noise (diffusion) coefficient g(t) at time `t`."""
+    def noise_coeff(self, t: torch.Tensor) -> torch.Tensor:
+        """Returns the noise coefficient :math:`g(t)` at time `t`."""
         return t**self.alpha * self.sigma
 
-    def sigma_func(self, t):
-        """Returns the std dev of the heat kernel at time `t`."""
-        p = 2*self.alpha+1
-        return (t**p / p)**0.5 * torch.tensor(self.sigma)
+    def sigma_func(self, t: torch.Tensor) -> torch.Tensor:
+        """Returns the width of the heat kernel at time `t`."""
+        p = 2*self.alpha + 1
+        return self.sigma * (t**p / p)**0.5
