@@ -27,12 +27,13 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-notebooks = [
-    "matplotlib",
-    "jupyter",
-    "tqdm"
-]
 gpu = ["torch"]
+notebooks = [
+    "jupyter",
+    "matplotlib",
+    "tqdm",
+    "ipywidgets"
+]
 
 [project.urls]
 Repository = "https://github.com/ovega14/sun_diffusion"
