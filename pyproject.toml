@@ -2,6 +2,9 @@
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+packages = ["sun_diffusion"]
+
 [project]
 name = "sun_diffusion"
 version = "0.1.0"
@@ -14,8 +17,8 @@ authors = [
     {name = "Octavio Vega", email = "vega00087@gmail.com"},
 ]
 dependencies = [
-    "numpy",
-    "torch"
+    "numpy>=1.24,<2",
+    "torch>=2.0.0"
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -29,6 +32,7 @@ notebooks = [
     "jupyter",
     "tqdm"
 ]
+gpu = ["torch"]
 
 [project.urls]
 Repository = "https://github.com/ovega14/sun_diffusion"
