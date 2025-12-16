@@ -50,20 +50,20 @@ class VarianceExpandingDiffusion(DiffusionProcess):
         \sigma(t) = \sqrt{\frac{\kappa^{2t} - 1}{2 \log\kappa}}.
 
     Args:
-        sigma (float): Noise scale
+        kappa (float): Noise scale
     """
-    def __init__(self, sigma: float):
+    def __init__(self, kappa: float):
         super().__init__()
-        self.sigma = sigma
+        self.kappa = kappa
 
     def noise_coeff(self, t: torch.Tensor) -> torch.Tensor:
         """Returns the noise coefficient :math:`g(t)` at time `t`."""
-        return self.sigma ** t
+        return self.kappa ** t
 
     def sigma_func(self, t: torch.Tensor) -> torch.Tensor:
         """Returns the width of the heat kernel at time `t`."""
-        num = sigma ** (2*t) - 1
-        den = 2 * math.log(sigma)
+        num = self.kappa ** (2*t) - 1
+        den = 2 * math.log(self.kappa)
         return (num / den) ** 0.5
 
     def diffuse(self, x_0: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
@@ -136,11 +136,11 @@ class VarianceExpandingDiffusionSUN(DiffusionSUN):
     Variance-expanding diffusion on the :math:`{\rm SU}(N)` group manifold.
 
     Args:
-        sigma (float): Noise scale
+        kappa (float): Noise scale
     """
-    def __init__(self, sigma: float):
+    def __init__(self, kappa: float):
         super().__init__()
-        self.sigma = sigma
+        self.kappa = kappa
 
     def noise_coeff(self, t: torch.Tensor) -> torch.Tensor:
         """Returns the noise coefficient :math:`g(t)` at time `t`."""
@@ -148,8 +148,8 @@ class VarianceExpandingDiffusionSUN(DiffusionSUN):
 
     def sigma_func(self, t: torch.Tensor) -> torch.Tensor:
         """Returns the width of the heat kernel at time `t`."""
-        num = sigma ** (2*t) - 1
-        den = 2 * math.log(sigma)
+        num = self.kappa ** (2*t) - 1
+        den = 2 * math.log(self.kappa)
         return (num / den) ** 0.5
 
 
@@ -162,22 +162,22 @@ class PowerDiffusionSUN(DiffusionSUN):
 
     .. math::
 
-        \sigma(t) = \sigma \sqrt{\frac{t^{2\alpha + 1}}{2\alpha + 1}}.
+        \sigma(t) = \kappa \sqrt{\frac{t^{2\alpha + 1}}{2\alpha + 1}}.
 
     Args:
-        sigma (float): Noise scale
+        kappa (float): Noise scale
         alpha (float): Time exponent
     """
-    def __init__(self, sigma: float, alpha: float):
+    def __init__(self, kappa: float, alpha: float):
         super().__init__()
-        self.sigma = sigma
+        self.kappa = kappa
         self.alpha = alpha
 
     def noise_coeff(self, t: torch.Tensor) -> torch.Tensor:
         """Returns the noise coefficient :math:`g(t)` at time `t`."""
-        return t**self.alpha * self.sigma
+        return t**self.alpha * self.kappa
 
     def sigma_func(self, t: torch.Tensor) -> torch.Tensor:
         """Returns the width of the heat kernel at time `t`."""
         p = 2*self.alpha + 1
-        return self.sigma * (t**p / p)**0.5
+        return self.kappa * (t**p / p)**0.5
