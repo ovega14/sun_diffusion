@@ -255,74 +255,87 @@ def sun_gens(Nc: int) -> torch.Tensor:
     return torch.stack(gens) / np.sqrt(2)
 
 
-def embed_sun_algebra(omega, Nc):
+def embed_sun_algebra(omega: torch.Tensor, Nc: int) -> torch.Tensor:
+    r"""Constructs a matrix in :math:`\mathfrak{su}(N)` from coeffs `omega`."""
     gens = sun_gens(Nc)
-    return torch.einsum('...x,xab->...ab', omega.to(gens), gens)
+    return torch.einsum('...x, xab -> ...ab', omega.to(gens), gens)
 
-def extract_sun_algebra(A):
+
+def extract_sun_algebra(A: torch.Tensor) -> torch.Tensor:
+    r"""Returns the coeffs from a matrix `A` in :math:`\mathfrak{su}(N)`."""
     Nc, Nc_ = A.shape[-2:]
-    assert Nc == Nc_
+    assert Nc == Nc_, 'input matrix must be square along final two dimensions'
     gens = sun_gens(Nc)
-    return torch.einsum('...ab,xba->...x', A.to(gens), gens)
+    return torch.einsum('...ab, xba -> ...x', A.to(gens), gens)
 
-def group_to_coeffs(U):
-    """
-    Decomposes an SU(N) group element into the coefficients
-    on the generators in the algebra su(N).
+
+def group_to_coeffs(U: torch.Tensor) -> torch.Tensor:
+    r"""
+    Decomposes an :math:`{\rm SU}(N)` matrix into the coefficients on the
+    generators in the algebra :math:`\mathfrak{su}(N)`.
 
     Args:
-        U: Batch of SU(N) matrices
+        U (Tensor): Batch of :math:`{\rm SU}(N)` matrices
 
     Returns:
-        Batch of N^2 - 1 generator coefficients
+        Batch of :math:`N^2 - 1` generator coefficients
     """
     return extract_sun_algebra(matrix_log(U))
 
 
 def _test_group2coeffs():
-    print('[Testing group_to_coeffs]')
+    print('[Testing group_to_coeffs...]')
     batch_size = 1
     Nc = 2
     U = random_sun_element(batch_size, Nc=Nc)
     coeffs = group_to_coeffs(U)
     assert coeffs.shape == (batch_size, Nc**2 - 1), \
         '[FAILED: incorrect output shape]'
-    assert torch.allclose(coeffs.imag, torch.zeros((batch_size, Nc**2 - 1)), atol=1e-5), \
-        '[FAILED: generator coefficients should be real]'
+    assert torch.allclose(
+        coeffs.imag, 
+        torch.zeros((batch_size, Nc**2 - 1)), 
+        atol=1e-5
+    ), '[FAILED: generator coefficients should be real]'
     print('[PASSED]')
 
 
 if __name__ == '__main__': _test_group2coeffs()
 
 
-def coeffs_to_group(coeffs):
-    """
-    Recomposes an SU(N) group element given the
-    coefficients of the generators in the Lie algebra su(N)
-    by forming the linear combination with the group generators.
+def coeffs_to_group(coeffs: torch.Tensor) -> torch.Tensor:
+    r"""
+    Recomposes an :math:`{\rm SU}(N)` matrix given generator coefficients.
+    
+    The group element is reconstructed by forming the linear combination with
+    the generators in :math:`\mathfrak{su}(N)`, and then exponentiating onto
+    the group manifold:
+
+    ..math::
+
+        U = \exp(\sum_a c_a T_a)
 
     Args:
-        coeffs: Batch of N^2 - 1 generator coefficients
+        coeffs (Tensor): Batch of :math:`N^2 - 1` generator coefficients
 
     Returns:
-        Batch of SU(N) group elements
+        Batch of :math:`{\rm SU}(N)` matrices
     """
     Nc = math.isqrt(coeffs.shape[-1]+1)
     return matrix_exp(embed_sun_algebra(coeffs, Nc))
 
 
 def _test_coeffs2group():
-    print('[Testing coeffs_to_group]')
+    print('[Testing coeffs_to_group...]')
     batch_size = 1
     Nc = 2
     coeffs = torch.randn((batch_size, Nc**2 - 1))
     U = coeffs_to_group(coeffs)
-    assert U.shape == (batch_size, Nc, Nc), \
-        '[FAILED: incorrect output shape]'
+    assert U.shape == (batch_size, Nc, Nc), '[FAILED: incorrect output shape]'
     I =  torch.eye(Nc, dtype=U.dtype).repeat(batch_size, 1, 1)
     assert torch.allclose(U @ adjoint(U), I, atol=1e-6), \
         '[FAILED: result not unitary]'
-    assert torch.allclose(torch.linalg.det(U), torch.ones((batch_size,), dtype=U.dtype)), \
+    detU = torch.linalg.det(U)
+    assert torch.allclose(detU, torch.ones((batch_size,), dtype=U.dtype)), \
         '[FAILED: result does not have unit determinant]'
     print('[PASSED]')
 
