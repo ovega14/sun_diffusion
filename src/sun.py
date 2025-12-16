@@ -18,6 +18,10 @@ __all__ = [
     'random_un_haar_element',
     'random_sun_lattice',
     'inner_prod',
+    'embed_sun_algebra',
+    'extract_sun_algebra',
+    'group_to_coeffs',
+    'coeffs_to_group',
     'mat_angle',
     'extract_diag',
     'embed_diag'
