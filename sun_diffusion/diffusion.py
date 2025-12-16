@@ -145,7 +145,7 @@ class VarianceExpandingDiffusionSUN(DiffusionSUN):
 
     def noise_coeff(self, t: torch.Tensor) -> torch.Tensor:
         """Returns the noise coefficient :math:`g(t)` at time `t`."""
-        return self.sigma ** t
+        return self.kappa ** t
 
     def sigma_func(self, t: torch.Tensor) -> torch.Tensor:
         """Returns the width of the heat kernel at time `t`."""
