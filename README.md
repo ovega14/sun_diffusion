@@ -23,7 +23,6 @@ pip install sun_diffusion[gpu]
 ```
 If PyTorch cannot detect a GPU, your code will fall back to CPU, or `set_device('cuda')` will raise an error. You can verify CUDA availability with a small example:
 ```python
-import torch
 from sun_diffusion.devices import set_device, summary, HAS_CUDA
 
 # Check CUDA availability
