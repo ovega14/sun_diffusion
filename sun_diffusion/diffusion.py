@@ -62,8 +62,9 @@ class VarianceExpandingDiffusion(DiffusionProcess):
 
     def sigma_func(self, t: torch.Tensor) -> torch.Tensor:
         """Returns the width of the heat kernel at time `t`."""
-        num = self.kappa ** (2*t) - 1
-        den = 2 * math.log(self.kappa)
+        kappa = torch.tensor(self.kappa)
+        num = kappa ** (2*t) - 1
+        den = 2 * math.log(kappa)
         return (num / den) ** 0.5
 
     def diffuse(self, x_0: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
@@ -148,8 +149,9 @@ class VarianceExpandingDiffusionSUN(DiffusionSUN):
 
     def sigma_func(self, t: torch.Tensor) -> torch.Tensor:
         """Returns the width of the heat kernel at time `t`."""
-        num = self.kappa ** (2*t) - 1
-        den = 2 * math.log(self.kappa)
+        kappa = torch.tensor(self.kappa)
+        num = kappa ** (2*t) - 1
+        den = 2 * math.log(kappa)
         return (num / den) ** 0.5
 
 
