@@ -16,7 +16,11 @@ __all__ = [
     'proj_to_algebra',
     'random_sun_element',
     'random_un_haar_element',
-    'inner_prod'
+    'random_sun_lattice',
+    'inner_prod',
+    'mat_angle',
+    'extract_diag',
+    'embed_diag'
 ]
 
 
@@ -96,7 +100,7 @@ def random_sun_element(
     A_im = scale * torch.randn((batch_size, Nc, Nc))
     A = A_re + 1j*A_im
     A = proj_to_algebra(A)
-    return matrix_exp(1j * A)
+    return matrix_exp(A)
 
 
 def _test_random_sun_element():
@@ -138,17 +142,21 @@ def random_un_haar_element(batch_size: int, *, Nc: int) -> torch.Tensor:
     return Q @ R
 
 
-def random_sun_lattice(batch_shape: tuple[int, ...], *, Nc: int) -> Tensor:
-    """
-    Creates a collection of random SU(N) matrices of 
-    arbitrary batch dimension specified by `batch_shape`.
+def random_sun_lattice(
+    batch_shape: tuple[int, ...], 
+    *, 
+    Nc: int
+) -> torch.Tensor:
+    r"""
+    Creates a collection of random :math:`{\rm SU}(N)` matrices with arbitrary
+    batch dimension specified by `batch_shape`.
 
     Args:
         batch_shape (tuple): Desired shape of batch to generate
         Nc (int): Matrix dimension
 
     Returns:
-        Random tensor of SU(N) matrices with shape `[*batch_shape, Nc, Nc]`
+        Tensor of matrices with shape `[*batch_shape, Nc, Nc]`
     """
     B = np.prod(batch_shape)
     U = random_sun_element(B, Nc=Nc)
@@ -214,30 +222,38 @@ if __name__ == '__main__': _test_inner_prod()
 
 
 @functools.cache
-def sun_gens(Nc):
-    """
-    Generators of the SU(N) Lie algebra.
+def sun_gens(Nc: int) -> torch.Tensor:
+    r"""
+    Generators of the :math:`\mathfrak{su}(N)` Lie algebra.
 
-    Normalized to satisfy Tr[T^a T^b] = delta^{ab}, so that the Nc=2 case equals
-    the Pauli matrices over sqrt(2) and the Nc=3 case equals the Gell-Mann
-    matrices over sqrt(2).
+    .. note:: The generators are normalized to satisfy 
+    :math:`{\rm Tr}[T^a T^b] = \delta^{ab}`, so that the `Nc = 2` case equals
+    the Pauli matrices over :math:`\sqrt{2}` and the `Nc = 3` case equals the
+    Gell-Mann matrices over :math:`\sqrt{2}`.
+
+    Args:
+        Nc (int): Dimension of the matrices in the algebra
+
+    Returns:
+        Generators as stacked PyTorch tensors, shape `[Nc**2 - 1, Nc, Nc]`
     """
     gens = []
     for j in range(1,Nc):
         for i in range(j):
-            gens.append(torch.zeros((Nc,Nc)) + 0j)
-            gens[-1][i,j] = 1
-            gens[-1][j,i] = 1
-            gens.append(torch.zeros((Nc,Nc)) + 0j)
-            gens[-1][i,j] = -1j
-            gens[-1][j,i] = 1j
-        gens.append(torch.zeros((Nc,Nc)) + 0j)
-        norm = np.sqrt(j*(j+1)/2)
+            gens.append(torch.zeros((Nc, Nc)) + 0j)
+            gens[-1][i, j] = 1
+            gens[-1][j, i] = 1
+            gens.append(torch.zeros((Nc, Nc)) + 0j)
+            gens[-1][i, j] = -1j
+            gens[-1][j, i] = 1j
+        gens.append(torch.zeros((Nc, Nc)) + 0j)
+        norm = np.sqrt(j * (j + 1) / 2)
         for k in range(j):
-            gens[-1][k,k] = 1/norm
-        gens[-1][j,j] = -j/norm
+            gens[-1][k, k] = 1 / norm
+        gens[-1][j, j] = -j / norm
     # unit normalization
     return torch.stack(gens) / np.sqrt(2)
+
 
 def embed_sun_algebra(omega, Nc):
     gens = sun_gens(Nc)
@@ -314,35 +330,39 @@ def _test_coeffs2group():
 if __name__ == '__main__': _test_coeffs2group()
 
 
-def mat_angle(U: Tensor) -> tuple[Tensor, Tensor, Tensor]:
+def mat_angle(
+    U: torch.Tensor
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Eigen-decomposes an input matrix `U` and retrives
-    its eigenangles and eigenvectors.
+    Eigen-decomposes a matrix `U` to get its eigenangles and eigenvectors.
 
     Args:
         U (Tensor): Input matrix to decompose
 
     Returns:
-        th (Tensor): Eigengangles
-        V (Tensor): Matrix of eigenvectors
-        Vinv (Tensor): Inverse of matrix of eigenvectors
+        thetas (Tensor): Eigengangles of `U`
+        V (Tensor): Matrix of eigenvectors of `U`
+        Vinv (Tensor): Inverse matrix of eigenvectors of `U`
     """
-    L, V = torch.linalg.eig(U)
+    eigs, V = torch.linalg.eig(U)
     Vinv = torch.linalg.inv(V)
-    th = torch.angle(L)
-    return th, V, Vinv
+    thetas = torch.angle(eigs)
+    return thetas, V, Vinv
 
-def extract_diag(M):
+
+def extract_diag(M: torch.Tensor) -> torch.Tensor:
+    """Extracts the diagonal entries of `M` as `(..., n, n) -> (..., n)`."""
     return torch.einsum('...ii->...i', M)
 
-def embed_diag(d):
-    """Embed a batch of diagonal entries transforming the shape as
-        (..., n) -> (..., n, n)
-    """
+
+def embed_diag(d: torch.Tensor) -> torch.Tensor:
+    """Embeds a batch of diagonal entries `d` as `(..., n) -> (..., n, n)`."""
     return torch.eye(d.shape[-1]) * d[...,None]
+
 
 def np_extract_diag(M):
     return np.einsum('...ii->...i', M)
+
 
 def np_embed_diag(d):
     return np.identity(d.shape[-1]) * d[...,None]
