@@ -1,4 +1,4 @@
-"""Utils for group/algbra operations with and between SU(N) variables."""
+"""Utilities for group/algebra operations with and between SU(N) variables."""
 import functools
 import math
 import numpy as np
