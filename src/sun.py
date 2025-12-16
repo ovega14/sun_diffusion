@@ -11,12 +11,12 @@ from .gens import pauli
 
 
 __all__ = [
+    'matrix_exp',
+    'matrix_log',
     'proj_to_algebra',
     'random_sun_element',
     'random_un_haar_element',
-    'inner_prod',
-    'matrix_exp',
-    'matrix_log'
+    'inner_prod'
 ]
 
 
@@ -27,27 +27,37 @@ if __name__ == '__main__':
     print(summary())
 
 
-def proj_to_algebra(A: Tensor) -> Tensor:
+def matrix_exp(A: torch.Tensor) -> torch.Tensor:
+    """Applies the complex exponential map to a matrix `A`."""
+    return torch.matrix_exp(1j * A)
+
+
+def matrix_log(U: torch.Tensor) -> torch.Tensor:
+    """Computes the matrix logarithm on an input matrix `U`."""
+    D, V = torch.linalg.eig(U)
+    logD = torch.diag_embed(torch.log(D))
+    return -1j * (V @ logD @ adjoint(V))
+
+
+def proj_to_algebra(A: torch.Tensor) -> torch.Tensor:
     r"""
-    Projects a complex-valued matrix `A` into the Lie algebra
-    of the group :math:`{\rm SU}(N_c)` by converting it into
-    a traceless, Hermitian matrix.
+    Projects a complex-valued matrix `A` into the :math:`{\rm SU}(N)` Lie 
+    algebra by converting it into a traceless, Hermitian matrix.
 
     Args:
-        A: Complex-valued matrix
+        A (Tensor): Batch of complex-valued square matrices
 
     Returns:
-        projA: Projection of A into :math:`\mathfrak{su}(N_c)`
+        Projection of A into :math:`\mathfrak{su}(N)`
     """
     Nc = A.size(-1)
     trA = torch.eye(Nc)[None, ...] * trace(A)[..., None, None]
     A -= trA / Nc
-    projA = (A + adjoint(A)) / 2
-    return projA
+    return (A + adjoint(A)) / 2
 
 
 def _test_proj_to_algebra():
-    print('[Testing proj_to_algebra]')
+    print('[Testing proj_to_algebra...]')
     batch_size = 5
     Nc = 2
     M = (1 + 1j) * torch.randn((batch_size, Nc, Nc))
@@ -55,37 +65,42 @@ def _test_proj_to_algebra():
     A = proj_to_algebra(M)
     trA = torch.eye(Nc)[None, ...] * trace(A)[:, None, None]
     
+    assert torch.allclose(adjoint(A), A), '[FAILED: result must be hermitian]'
     assert torch.allclose(trA, torch.zeros_like(trA), atol=1e-6), \
-        '[FAILED: A is not traceless]'
-    assert torch.allclose(adjoint(A), A), \
-        '[FAILED: A is not hermitian]'
+        '[FAILED: result must be traceless]'
     print('[PASSED]')
 
 
 if __name__ == '__main__': _test_proj_to_algebra()
 
 
-def random_sun_element(batch_size: int, *, Nc: int, sigma: float = 1.0) -> Tensor:
-    """
-    Creates a random element of SU(N) whose elements are
+def random_sun_element(
+    batch_size: int, 
+    *, 
+    Nc: int, 
+    scale: float = 1.0
+) -> torch.Tensor:
+    r"""
+    Creates a batch of random :math:`{\rm SU}(N)` matrices whose elements are
     randomly sampled from a standard normal distribution.
 
     Args:
-        batch_size (int): Number of samples to generate
-        Nc (int): Matrix dimension
+        batch_size (int): Number of matrices to generate
+        Nc (int): Dimension of each matrix
+        scale (float): Width of the normal density. Default: 1.0
 
     Returns:
-        Random SU(N) matrices as PyTorch tensors
+        Batch of random :math:`{\rm SU}(N)` matrices as PyTorch tensors
     """
-    A_re = torch.randn((batch_size, Nc, Nc))
-    A_im = torch.randn((batch_size, Nc, Nc))
-    A = A_re + 1j * A_im
+    A_re = scale * torch.randn((batch_size, Nc, Nc))
+    A_im = scale * torch.randn((batch_size, Nc, Nc))
+    A = A_re + 1j*A_im
     A = proj_to_algebra(A)
-    return torch.matrix_exp(1j * sigma * A)
+    return matrix_exp(1j * A)
 
 
 def _test_random_sun_element():
-    print('[Testing random_sun_element]')
+    print('[Testing random_sun_element...]')
     batch_size = 5
     Nc = 2
     U = random_sun_element(batch_size, Nc=Nc)
@@ -102,36 +117,27 @@ def _test_random_sun_element():
 if __name__ == '__main__': _test_random_sun_element()
 
 
-
-def random_un_haar_element(
-    batch_shape: int | tuple[int, ...], 
-    *, 
-    Nc: int
-) -> Tensor:
-    """
-    Samples a batch of random U(Nc) elements from the Haar measure using QR 
-    decomposition.
+def random_un_haar_element(batch_size: int, *, Nc: int) -> torch.Tensor:
+    r"""
+    Creates a batch of Haar-random :math:`{\rm U}(N)` matrices.
 
     Args:
-        batch_shape (int, tuple): Batch dimension(s) of the matrices to create
-        Nc (int): Dimension of the matrix to generate
+        batch_size (int): Number of matrices to generate
+        Nc (int): Dimension of each matrix
 
     Returns:
-	V (Tensor): Batch of Haar-random Nc x Nc unitary matrices
+        Batch of random :math:`{\rm U}(N)` matrices as PyTorch tensors
     """
-    if not isinstance(batch_shape, tuple):
-        batch_shape = (batch_shape,)
-    
-    U_re = torch.randn((*batch_shape, Nc, Nc))
-    U_im = torch.randn((*batch_shape, Nc, Nc))
-    U = U_re + 1j * U_im
+    U_re = torch.randn((batch_size, Nc, Nc))
+    U_im = torch.randn((batch_size, Nc, Nc))
+    U = U_re + 1j*U_im
     
     Q, R = torch.linalg.qr(U)
     R *= torch.eye(R.shape[-1])
     R /= torch.abs(R) + (1-torch.eye(R.shape[-1]))
     return Q @ R
 
-        
+
 def random_sun_lattice(batch_shape: tuple[int, ...], *, Nc: int) -> Tensor:
     """
     Creates a collection of random SU(N) matrices of 
@@ -150,7 +156,7 @@ def random_sun_lattice(batch_shape: tuple[int, ...], *, Nc: int) -> Tensor:
 
 
 def _test_random_sun_lattice():
-    print('[Testing random_sun_lattice]')
+    print('[Testing random_sun_lattice...]')
     batch_size = 5
     lattice_shape = (8, 8)
     batch_shape = (batch_size, *lattice_shape)
@@ -169,51 +175,42 @@ def _test_random_sun_lattice():
 if __name__ == '__main__': _test_random_sun_lattice()
 
 
-def inner_prod(U, V):
+def inner_prod(U: torch.Tensor, V: torch.Tensor) -> torch.Tensor:
     r"""
-    Computes the inner product between two SU(N) Lie
-    algebra-valued matrices `U` and `V`. Defines as
+    Computes the inner product between two Lie algebra matrices `U` and `V`. 
+
+    The inner product on :math:`\mathfrak{su}(N)` is defined as
 
     .. math::
 
         \langle U, V \rangle := {\rm Tr}(U^\dagger V)
 
     Args:
-        U: Square, hermitian matrix
-        V: Square, hermitian matrix
+        U (Tensor): Batch of traceless, Hermitian matrices
+        V (Tensor): Batch of traceless, Hermitian matrices
 
     Returns:
-        Inner product between `U` and `V` as a real scalar
+        Inner product between `U` and `V` as a batch of real scalars
     """
     return trace(adjoint(U) @ V)
 
 
 def _test_inner_prod():
-    print('[Testing inner_prod]')
+    print('[Testing inner_prod...]')
     from .gens import pauli
 
     for i in range(4):
         pauli_i = pauli(i)
         for j in range(4):
             pauli_j = pauli(j)
-            assert torch.allclose(inner_prod(pauli_i, pauli_j), torch.tensor([i == j], dtype=pauli_j.dtype)), \
-                f'[FAILED: pauli {i} not orthonormal to pauli {j}]'
+            assert torch.allclose(
+                inner_prod(pauli_i, pauli_j), 
+                torch.tensor([i == j], dtype=pauli_j.dtype)
+            ), f'[FAILED: pauli {i} not orthonormal to pauli {j}]'
     print('[PASSED]')
 
 
 if __name__ == '__main__': _test_inner_prod()
-
-
-def matrix_exp(A):
-    """Applies the exponential map to a matrix `A`."""
-    return torch.matrix_exp(1j * A)
-
-
-def matrix_log(U):
-    """Computes the matrix logarithm on an input matrix `U`."""
-    D, V = torch.linalg.eig(U)
-    logD = torch.diag_embed(torch.log(D))
-    return -1j * (V @ logD @ adjoint(V))
 
 
 @functools.cache
