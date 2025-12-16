@@ -1,6 +1,11 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "sun_diffusion"
-description = "Diffusion models for compact variables and SU(N) lattice field theories."
+version = "0.1.0"
+description = "Diffusion models for SU(N) degrees of freedom."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {file = "LICENSE"}
@@ -12,3 +17,19 @@ dependencies = [
     "numpy",
     "torch"
 ]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.optional-dependencies]
+notebooks = [
+    "matplotlib",
+    "jupyter",
+    "tqdm"
+]
+
+[project.urls]
+Repository = "https://github.com/ovega14/sun_diffusion"
+Paper = "https://arxiv.org/abs/2512.xxxxx"
