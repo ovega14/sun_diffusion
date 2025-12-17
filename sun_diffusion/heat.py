@@ -13,11 +13,18 @@ from torch import Tensor
 
 from .utils import grab, logsumexp_signed
 from .canon import canonicalize_sun
+from .irreps import (
+    casimir,
+    weyl_dimension,
+    weyl_character,
+    generate_partitions
+)
 
 
 __all__ = [
     'log_sun_hk',
     'sun_hk',
+    'sun_dual_hk',
     'sun_score_hk',
     'sun_score_hk_autograd',
     'sun_score_hk_autograd_v2',
@@ -119,6 +126,51 @@ def sun_hk(
         :math:`{\rm SU}(N)` heat kernel evaluated on the angles `thetas`
     """
     return log_sun_hk(thetas, width=width, n_max=n_max, eig_meas=eig_meas).exp()
+
+
+def sun_dual_hk(
+    thetas: torch.Tensor, 
+    *, 
+    width: torch.Tensor, 
+    max_weight: int = 5,
+    eig_meas: bool = True
+) -> torch.Tensor:
+    r"""
+    Evaluates the :math:`{\rm SU}(N)` dual heat kernel over wrapped eigenangles
+    as a character expansion.
+
+    .. note:: This function assumes the input only includes the :math:`N-1`
+    independent eigenangles.    
+
+    Args:
+        thetas (Tensor): Wrapped eigenangles, shaped `[B, Nc-1]`
+        width (Tensor): Standard deviation of the heat kernel, batched
+        max_weight (int): Max total weight of irreps to sum. Default: 5
+        eig_meas (bool): Whether to include Haar measure term. Default: `True`
+
+    Returns:
+        :math:`{\rm SU}(N)` dual heat kernel evaluated on the angles `thetas`
+    """
+    thn = -torch.sum(thetas, dim=-1, keepdim=True)
+    thetas = torch.cat([thetas, thn], dim=-1)
+    Nc = thetas.shape[-1]
+    
+    K = 0
+    partitions = generate_partitions(Nc, max_weight)
+    for mu in partitions:
+        d_mu = weyl_dimension(mu)
+        c_mu = casimir(mu)
+        chi_mu = weyl_character(thetas, mu)
+        K += d_mu * torch.exp(-c_mu * width**2) * chi_mu
+
+    # Haar measure factor
+    if eig_meas:
+        delta = torch.stack([
+            thetas[..., i] - thetas[..., j]
+            for i in range(Nc) for j in range(i+1, Nc)
+        ], dim=-1)
+        K = K * torch.prod(_sun_hk_meas_J(delta)**2, dim=-1)
+    return K
 
 
 def _sun_score_hk_unwrapped(xs: Tensor, *, width: Tensor) -> Tensor:
