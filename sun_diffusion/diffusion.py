@@ -126,8 +126,9 @@ class DiffusionSUN(DiffusionProcess):
         
         sigma_t = self.sigma_func(t)
         xs = sample_sun_hk(batch_size, Nc, width=sigma_t, n_iter=n_iter)
+        xs = torch.tensor(xs)
         V = random_un_haar_element(batch_size, Nc=Nc)
-        A = V @ embed_diag(torch.tensor(xs)).to(V) @ adjoint(V)
+        A = V @ embed_diag(xs).to(V) @ adjoint(V)
         U_t = matrix_exp(A) @ U_0
         return U_t, xs, V
 
