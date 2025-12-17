@@ -130,7 +130,9 @@ def weyl_character(thetas: torch.Tensor, mu: torch.Tensor) -> torch.Tensor:
 
     .. math::
 
-        \chi_\mu(U) = \frac{\det \left(\right)}{}
+        \chi_\mu(U) = \frac{
+            \det_{i,j}\left[\lambda_i^{\mu_j + N - j}\right]}{
+            \det_{i,j}\left[\lambda_i^{N - j}\right]}
 
     where the eigenvalues are :math:`\lambda_j = e^{i \theta_j}`.
 
