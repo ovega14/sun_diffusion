@@ -1,50 +1,117 @@
-### Analysis library from github.com:gkanwar/lattlib.git
-
+"""Analysis library from github.com:gkanwar/lattlib.git"""
 import numpy as np
 
-# Plot error traces
-def add_errorbar(trace, *, ax, xs=None, off=0.0, flip=False, **kwargs):
+from typing import Optional, Any
+from numpy.typing import ArrayLike
+
+from matplotlib.axes import Axes
+from matplotlib.container import ErrorbarContainer
+
+
+def add_errorbar(
+    trace: tuple[ArrayLike, ArrayLike],
+    *, 
+    ax: Axes, 
+    xs: Optional[ArrayLike] = None, 
+    off: float = 0.0, 
+    flip: bool = False,
+    **kwargs: Any
+) -> ErrorbarContainer:
+    """
+    Plots a mean curve with error bars on a given axis.
+
+    This function wraps around `matplotlib.axes.Axes.errorbar` with several
+    added options for convenience.
+
+    Args:
+        trace (tuple): Tuple of arrays containing `(mean, err)`
+        ax (Axes): Axis on which to plot the curve
+        xs (Optional): X coordinates. If `None`, defaults to integer indices.
+        off (float): Constant offset added to `xs`. Default: `0.0`
+        flip (bool): Whether to swap the x and y axes. Default: `False`
+
+    Returns:
+        A Matplotlib `ErrorBarContainer`
+    """
     mean, err = trace
+    
     if xs is None:
         xs = np.arange(len(mean), dtype=np.float64)
     else:
         xs = np.array(xs).astype(np.float64)
     xs += off
+    
     if flip:
         return ax.errorbar(mean, xs, xerr=err, **kwargs)
-    else:
-        return ax.errorbar(xs, mean, yerr=err, **kwargs)
-def add_errorbar_fill(trace, *, ax, xs=None, off=0.0, **kwargs):
+    return ax.errorbar(xs, mean, yerr=err, **kwargs)
+
+
+def add_errorbar_fill(
+    trace: tuple[ArrayLike, ArrayLike],
+    *,
+    ax: Axes,
+    xs: Optional[ArrayLike] = None,
+    off: float = 0.0,
+    **kwargs: Any
+) -> None:
+    """
+    Plots a mean curve filled between the error bands.
+
+    Args:
+        trace (tuple): Tuple of arrays containing `(mean, err)`
+        ax (Axes): Axis on which to plot the curve
+        xs (Optional): X coordinates. If `None`, defaults to integer indices.
+        off (float): Constant offset added to `xs`. Default: `0.0`
+    """
     mean, err = trace
+    
     if xs is None:
         xs = np.arange(len(mean), dtype=np.float64)
     else:
         xs = np.array(xs).astype(np.float64)
     xs += off
+    
     kwargs_stripped = {}
     if 'color' in kwargs:
         kwargs_stripped['color'] = kwargs['color']
     ax.fill_between(xs, mean-err, mean+err, alpha=0.8, **kwargs_stripped)
     ax.plot(xs, mean, **kwargs)
-# From SO: 37765197/darken-or-lighten-a-color-in-matplotlib
-def lighten_color(color, amount=0.5):
+
+
+def lighten_color(
+    color: Union[str, tuple[float, float, float]], 
+    amount: float = 0.5
+) -> tuple[float, float, float]:
     """
     Lightens the given color by multiplying (1-luminosity) by the given amount.
-    Input can be matplotlib color string, hex string, or RGB tuple.
+
+    .. note: From SO: 37765197/darken-or-lighten-a-color-in-matplotlib
 
     Examples:
-    >> lighten_color('g', 0.3)
-    >> lighten_color('#F034A3', 0.6)
-    >> lighten_color((.3,.55,.1), 0.5)
+
+    .. code-block:: python
+
+        >> lighten_color('g', 0.3)
+        >> lighten_color('#F034A3', 0.6)
+        >> lighten_color((.3,.55,.1), 0.5)
+
+    Args:
+        color (str, tuple): Color to lighten, can be color/hex string or RGB 
+        amount (float): Factor by which to lighten `color`. Default: `0.5`
+
+    Returns:
+        Signature of lightened color as an RGB tuple
     """
     import matplotlib.colors as mc
     import colorsys
+    
     try:
         c = mc.cnames[color]
-    except:
+    except (KeyError, TypeError):
         c = color
+    
     c = colorsys.rgb_to_hls(*mc.to_rgb(c))
-    return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
+    return colorsys.hls_to_rgb(c[0], 1 - amount*(1 - c[1]), c[2])
 
 
 # Standard bootstrapping fns
