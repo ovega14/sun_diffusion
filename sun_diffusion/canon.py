@@ -56,7 +56,7 @@ def canonicalize_su3(thetas: torch.Tensor) -> torch.Tensor:
         [1, 0, -1],
         [0, -1, 1],
         [-1, 1, 0]
-    ]) / (6*np.pi)
+    ], dtype=thetas.dtype) / (6*np.pi)
     v = thetas.reshape(-1, 3)
     kappa = U_inv @ torch.transpose(v, 0, 1)  # ij, jb -> ib
     a, b, c, = kappa[0], kappa[1], kappa[2]
@@ -83,7 +83,7 @@ def canonicalize_su3(thetas: torch.Tensor) -> torch.Tensor:
         [1, 0, -1],
         [0, -1, 1],
         [-1, 1, 0]
-    ])
+    ], dtype=thetas.dtype)
     kappa = torch.stack([a, b, c], dim=0)
     return torch.transpose(U @ kappa, 0, 1).reshape(thetas.shape)
 
