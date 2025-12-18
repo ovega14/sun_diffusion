@@ -1,5 +1,6 @@
 """"Utilities for handling the irreducible representations of SU(N)."""
 import torch
+import numpy as np
 import itertools
 
 
@@ -7,6 +8,7 @@ __all__ = [
     'casimir',
     'weyl_dimension',
     'weyl_character',
+    'grad_character',
     'generate_partitions'
 ]
 
@@ -177,6 +179,87 @@ def _test_character():
 
 
 if __name__ == '__main__': _test_character()
+
+
+def grad_character(thetas: torch.Tensor, mu: torch.Tensor) -> torch.Tensor:
+    r"""
+    Computes the gradient of the Weyl character with respect to eigenangles.
+
+    Args:
+        thetas (Tensor): Batch of eigenangles, shaped `[B, Nc]`
+        mu (Tensor): Partition corresponding to SU(N) irrep
+
+    Returns:
+        Gradient of the character with respect to `thetas`
+    """
+    Nc = len(mu)
+    inds = torch.arange(1, Nc+1)
+    lam = mu + Nc - inds
+    rho = Nc - inds
+
+    A = torch.exp(1j * lam[:, None] * thetas[:, None, :])
+    B = torch.exp(1j * rho[:, None] * thetas[:, None, :])
+
+    detA = torch.linalg.det(A)
+    detB = torch.linalg.det(B)
+    chi = detA / detB
+
+    Ainv = torch.linalg.inv(A)
+    Binv = torch.linalg.inv(B)
+    
+    V = A * lam[None, :, None]
+    X = torch.matmul(Ainv, V)
+    termA = X.diagonal(dim1=-2, dim2=-1)
+
+    W = B * rho[None, :, None]
+    Y = torch.matmul(Binv, W)
+    termB = Y.diagonal(dim1=-2, dim2=-1)
+    
+    grad = 1j * chi[:, None] * (termA - termB)
+    return grad.real
+
+
+def autograd_character(thetas: torch.Tensor, mu: torch.Tensor) -> torch.Tensor:
+    """
+    Computes the gradient of the Weyl character with automatic differentiation.
+
+    Args:
+        thetas (Tensor): Batch of eigenangles, shaped `[B, Nc]`
+        mu (Tensor): Partition corresponding to SU(N) irrep
+    
+    Returns:
+        Autograd derivative of the character with respect to `thetas`
+    """
+    thetas = thetas.clone().detach().requires_grad_(True)
+    chi = weyl_character(thetas, mu)
+    grads = []
+    for i in range(chi.shape[0]):
+        g = torch.autograd.grad(
+            chi[i], thetas,
+            retain_graph=True,
+            create_graph=False,
+            allow_unused=False
+        )[0][i]
+        grads.append(g)
+    grads = torch.stack(grads, dim=0)
+    return grads.detach()
+
+
+def _test_grad_character():
+    print('[Testing grad_character...]')
+    batch_size = 10
+    Nc = 2
+    x = 2*np.pi * torch.rand((batch_size, Nc-1)) - np.pi
+    thetas = torch.cat([x, -torch.sum(x, dim=-1, keepdim=True)], dim=-1)
+    mu = torch.tensor([1, 0])
+    grad_chi = grad_character(thetas, mu)
+    autograd_chi = autograd_character(thetas, mu)
+    assert torch.allclose(grad_chi, autograd_chi, atol=1e-5), \
+        '[FAILED: Analytical and autodiff grads do not match]'
+    print('[PASSED]')
+
+
+if __name__ == '__main__': _test_grad_character()
 
 
 def generate_partitions(Nc: int, max_weight: int) -> list[torch.Tensor]:
