@@ -17,6 +17,7 @@ from .irreps import (
     casimir,
     weyl_dimension,
     weyl_character,
+    grad_character,
     generate_partitions
 )
 
@@ -26,6 +27,7 @@ __all__ = [
     'sun_hk',
     'sun_dual_hk',
     'sun_score_hk',
+    'sun_score_dual_hk',
     'sun_score_hk_autograd',
     'sun_score_hk_autograd_v2',
     'sample_sun_hk'
@@ -231,6 +233,43 @@ def sun_score_hk(thetas: Tensor, *, width: Tensor, n_max: int = 3) -> Tensor:
         exp_factor = (si * torch.exp(logKi - logK))[..., None]
         total = total + exp_factor * _sun_score_hk_unwrapped(xs, width=width)
     return total
+
+
+def sun_score_dual_hk(
+    thetas: torch.Tensor, 
+    *, 
+    width: torch.Tensor, 
+    max_weight: int = 5
+) -> torch.Tensor:
+    r"""
+    Computes the analytical score function for the dual :math:`{\rm SU}(N)`
+    heat kernel over eigenangles `thetas`.
+
+     .. note:: This function assumes the input only includes the :math:`N-1` 
+    independent eigenangles.
+
+    Args:
+        thetas (Tensor): Wrapped eigenangles, shaped `[B, Nc-1]`
+        width (Tensor): Standard deviation of the heat kernel, batched
+        max_weight (int): Max total weight of irreps to sum. Default: 5
+
+    Returns:
+        Analytical gradient of the character expansion HK
+    """
+    K = sun_dual_hk(thetas, width=width, max_weight=max_weight, eig_meas=False)
+    thetas = torch.cat(
+        [thetas, -torch.sum(thetas, dim=-1, keepdim=True)]
+    , dim=-1)
+    Nc = thetas.shape[-1]
+
+    gradK = 0
+    partitions = generate_partitions(Nc, max_weight)
+    for mu in partitions:
+        d_mu = weyl_dimension(mu)
+        C_mu = casimir(mu)
+        grad_chi_mu = grad_character(thetas, mu)
+        gradK += d_mu * torch.exp(-C_mu * width**2)[:, None] * grad_chi_mu
+    return gradK / K[:, None]
 
 
 def sun_score_hk_autograd(
