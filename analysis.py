@@ -1,8 +1,8 @@
 """Analysis library from github.com:gkanwar/lattlib.git"""
 import numpy as np
 
-from typing import Optional, Any
-from numpy.typing import ArrayLike
+from typing import Optional, Any, Union, Callable, Iterable
+from numpy.typing import ArrayLike, NDArray
 
 from matplotlib.axes import Axes
 from matplotlib.container import ErrorbarContainer
@@ -114,44 +114,158 @@ def lighten_color(
     return colorsys.hls_to_rgb(c[0], 1 - amount*(1 - c[1]), c[2])
 
 
-# Standard bootstrapping fns
-mean = lambda x: np.mean(x, axis=0)
-rmean = lambda x: np.real(np.mean(x, axis=0))
-imean = lambda x: np.imag(np.mean(x, axis=0))
-amean = lambda x: np.abs(np.mean(x, axis=0))
+# =============================================================================
+#  Standard Bootstrapping Functions
+# =============================================================================
+def mean(x):
+    """Averages input array `x` over axis 0."""
+    return np.mean(x, axis=0)
 
-def log_meff(x):
+
+def rmean(x):
+    """Gets the real part of the mean of `x` over axis 0."""
+    return np.real(np.mean(x, axis=0))
+
+
+def imean(x):
+    """Gets the imaginary part of the mean of `x` over axis 0."""
+    return np.imag(np.mean(x, axis=0))
+
+
+def amean(x):
+    """Gets the magnitude of the mean of `x` over axis 0."""
+    return np.abs(np.mean(x, axis=0))
+
+
+def log_meff(x: NDArray[np.complex128]) -> NDArray[np.float64]:
+    r"""
+    Computes the effective mass using the :math:`\log` estimator.
+
+    Estimates the mass from adjacent correlator ratios, as in the infinite
+    volume / early-time approximation. Effective mass is given by
+
+    .. math::
+
+        m_{\rm eff}^\log (t) = \log\left[\frac{C(t)}{C(t+1)}\right].
+
+    Args:
+        x (NDArray): Ensemble of correlation functions
+
+    Returns:
+        Estimate for the effective mass
+    """
     corr = rmean(x)
     return np.log(corr[:-1] / corr[1:])
-def acosh_meff(x):
-    corr = rmean(x)
-    return np.arccosh((corr[:-2] + corr[2:])/(2*corr[1:-1]))
 
-def make_stn_f(*, N_inner_boot, f):
+
+def acosh_meff(x: NDArray[np.complex128]) -> NDArray[np.float64]:
+    r"""
+    Computes the effective mass using the :math:`\cosh` estimator.
+
+    Estimates the mass assuming :math:`\cosh` behavior from periodic boundary
+    conditions. Effective mass is given by
+
+    .. math::
+
+        m_{\rm eff}^\cosh (t) = \arccosh\left[
+            \frac{C(t-1) + C(t+1)}{2C(t)}\right].
+
+    Args:
+        x (NDArray): Ensemble of correlation functions
+
+    Returns:
+        Estimate for the effective mass
+    """
+    corr = rmean(x)
+    return np.arccosh((corr[:-2] + corr[2:]) / (2*corr[1:-1]))
+
+
+def make_stn_f(
+    *, 
+    N_inner_boot: int, 
+    f: Callable[[NDArray[np.generic]], NDArray[np.generic]]
+) -> Callable[[NDArray[np.generic]], NDArray[np.float64]]:
+    """
+    Builds a function that bootstraps input data using a function or estimator
+    `f` and computes its signal-to-noise ratio.
+
+    Args:
+        N_inner_boot (int): Number of bootstrap samples
+        f (Callable): Statistic or function applied inside the bootstrap
+
+    Returns:
+        stn (Callable): Function to compute signal-to-noise using `f`
+    """
     def stn(x):
         mean, err = bootstrap(x, Nboot=N_inner_boot, f=f)
         stn = np.abs(mean) / np.abs(err)
         return stn
     return stn
 
-# Bootstrapping framework
-def bootstrap_gen(*samples, Nboot, seed=None):
+
+# =============================================================================
+#  Bootstrapping Framework
+# =============================================================================
+def bootstrap_gen(
+    *samples: NDArray[np.generic], 
+    Nboot: int, 
+    seed: Optional[int] = None
+) -> Iterable[tuple[NDArray[np.generic]], ...]:
+    """
+    Bootstrap resampling generator.
+
+    Takes one or more aligned datasets (`samples`) and repeatedly resamples
+    them *with replacement*, then yields resampled versions of *all* samples.
+
+    Args:
+        samples (NDArray): Arrays, assumed to have same length along axis 0
+        Nboot (int): Number of bootstrap resamples
+        seed (int, Optional): RNG seed
+
+    Returns:
+        Generator that yields bootstrap-resampled data when iterated
+    """
     rng = np.random.default_rng(seed=seed)
     n = len(samples[0])
     for i in range(Nboot):
         inds = rng.integers(n, size=n)
         yield tuple(s[inds] for s in samples)
 
-def bootstrap(*samples, Nboot, f, bias_correction=False, seed=None):
+
+def bootstrap(
+    *samples: NDArray[np.generic], 
+    Nboot: int, 
+    f: Callable[..., NDArray[np.generic]], 
+    bias_correct: bool = False, 
+    seed: Optional[int] = None
+) -> tuple[NDArray[np.generic], NDArray[np.float64]]:
+    r"""
+    Computes a bootstrap estimate of a statistic `f`.
+
+    Bias correction can optionally be applied to the estimate by computing 
+    :math:`f - f_{\rm bias} = 2f - \langle f^* \rangle`.
+
+    Args:
+        samples (NDArray): Arrays, assumed to have same length along axis 0
+        Nboot (int): Number of bootstrap resamples
+        f (Callable): Statistic applied to each bootstrap sample
+        bias_correct (bool): Whether to bias-correct result. Default: `False`
+        seed (int, Optional): RNG seed
+
+    Returns:
+        boot_mean: Bootstrap estimate of :math:`\langle f \rangle`
+        boot_err: Bootstrap uncertainty (standard deviation)
+    """
     boots = []
     for x in bootstrap_gen(*samples, Nboot=Nboot, seed=seed):
         boots.append(f(*x))
     boot_mean, boot_err = np.mean(boots, axis=0), np.std(boots, axis=0)
-    if not bias_correction:
-        return boot_mean, boot_err
-    full_mean = f(*samples)
-    corrected_mean = 2*full_mean - boot_mean
-    return corrected_mean, boot_err
+    if bias_correct:
+        full_mean = f(*samples)
+        corrected_mean = 2*full_mean - boot_mean
+        return corrected_mean, boot_err
+    return boot_mean, boot_err
+
 
 # TODO: Replace with np.cov? Only difference is that covar_from_boots allows
 # higher-order shapes, but this is probably not useful.
@@ -162,10 +276,12 @@ def covar_from_boots(boots):
     deltas = boots - means
     return np.tensordot(deltas, deltas, axes=(0,0)) / (Nboot-1)
 
+
 def shrink_covar(covar, *, lam):
     assert len(covar.shape) == 2 and covar.shape[0] == covar.shape[1]
     diag_covar = np.diag(covar) * np.identity(covar.shape[0])
     return (1-lam) * covar + lam * diag_covar
+
 
 def bin_data(x, *, binsize, silent_trunc=True):
     x = np.array(x)
@@ -176,6 +292,7 @@ def bin_data(x, *, binsize, silent_trunc=True):
     ts = np.arange(0, x.shape[0], binsize) # left endpoints of bins
     x = np.reshape(x, (-1, binsize) + x.shape[1:])
     return ts, np.mean(x, axis=1)
+
 
 # Autocorrelations
 def compute_autocorr(Os, *, tmax, vacsub=True):
@@ -188,10 +305,14 @@ def compute_autocorr(Os, *, tmax, vacsub=True):
     Gamma = np.insert(Gamma, 0, np.mean(dOs**2))
     rho = Gamma / Gamma[0]
     return rho
+
+
 def compute_tint(Os, *, tmax, vacsub=True):
     rho = compute_autocorr(Os, tmax=tmax, vacsub=vacsub)
     tint = 0.5 + np.cumsum(rho[1:])
     return tint
+
+
 def self_consistent_tint(tints, *, W=4):
     after_W_tint = tints < np.arange(len(tints)) / W
     if not np.any(after_W_tint):
