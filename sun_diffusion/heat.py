@@ -349,8 +349,13 @@ def sun_score_hk_autograd_v2(
 
 
 def _test_sun_score_hk():
-    print('[Testing sun_score_hk]')
+    print('[Testing sun_score_hk...]')
     torch.manual_seed(1234)
+
+    from .devices import set_device, summary
+    set_device('cpu')
+    print(summary())
+
     batch_size = 16
     Nc = 3
     thetas = 4*np.pi*(2*torch.rand((batch_size, Nc))-1)
@@ -371,7 +376,7 @@ def _test_sun_score_hk():
     ratio = a/b
     thetas_ratio = grab(torch.stack([ratio[inds], thetas[inds]/np.pi], dim=-2))
     assert torch.allclose(a, b), f'{a[inds]=} {b[inds]=}\n{thetas_ratio=}'
-    print('[PASSED test_sun_score]')
+    print('[PASSED]')
 
 
 if __name__ == '__main__': _test_sun_score_hk()
