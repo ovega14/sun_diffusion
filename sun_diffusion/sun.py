@@ -314,9 +314,9 @@ def coeffs_to_group(coeffs: torch.Tensor) -> torch.Tensor:
     the generators in :math:`\mathfrak{su}(N)`, and then exponentiating onto
     the group manifold:
 
-    ..math::
+    .. math::
 
-        U = \exp(\sum_a c_a T_a)
+        U = \exp\left(\sum_a c_a T_a\right)
 
     Args:
         coeffs (Tensor): Batch of :math:`N^2 - 1` generator coefficients

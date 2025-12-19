@@ -23,8 +23,8 @@ def trace(
     Computes the trace of a batched matrix `mtrx` along a chosen pair of 
     dimensions `(dim1, dim2)`.
 
-    .. warning:: By default, `trace` does NOT preserve the dimensionality of the 
-    matrix.
+    .. warning::
+        By default, `trace` does NOT preserve the dimensionality of the matrix.
 
     Args:
         mtrx (Tensor, NDArray): Matrix to be traced
@@ -69,11 +69,10 @@ def transpose(
         return torch.transpose(mtrx, dim1, dim2)
     elif isinstance(mtrx, np.ndarray):
         return np.swapaxes(mtrx, dim1, dim2)
-    else:
-        raise TypeError(f'Unsupported type {type(mtrx).__name__}')
+    raise TypeError(f'Unsupported type {type(mtrx).__name__}')
 
 
-def adjoint(U):
+def adjoint(U: Tensor | NDArray) -> Tensor | NDArray:
     r"""
     Computes the Hermitian adjoint of a complex-valued matrix `U`, which is
     defined mathematically defined as the complex conjugate transpose:

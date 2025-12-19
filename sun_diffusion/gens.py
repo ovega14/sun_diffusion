@@ -32,11 +32,12 @@ _su2_gens = {
 
 def pauli(i: int) -> torch.Tensor:
     r"""
-    Retrieves the ith Pauli matrix as a PyTorch tensor.
+    Retrieves the i<sup>th</sup> Pauli matrix as a PyTorch tensor.
 
-    .. note:: The pauli matrices are normalized by a factor of
-    :math:`\frac{1}{\sqrt{2}}` so that they form an orthonormal
-    basis for SU(2).
+    .. note::
+        The pauli matrices are normalized by a factor of
+        :math:`\frac{1}{\sqrt{2}}` so that they form an orthonormal basis for
+        :math:`{\rm SU}(2)`.
 
     Args:
         i (int): Index of pauli matrix to get

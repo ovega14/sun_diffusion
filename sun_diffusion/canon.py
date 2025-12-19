@@ -15,10 +15,10 @@ __all__ = [
 def canonicalize_su2(thetas: torch.Tensor) -> torch.Tensor:
     r"""
     Canonicalizes a set of :math:`{\rm SU}(2)` eigenangles 
-    :math:`(\theta_1, \theta_2)` by
+    :math:`(\theta_1, \theta_2)` by:
 
-        1.) Set :math:`\theta_1 = {\rm wrap}(|\theta|)`
-        2.) Set :math:`\theta_2 = -\theta_1`
+    1. Set :math:`\theta_1 = {\rm wrap}(|\theta|)`
+    2. Set :math:`\theta_2 = -\theta_1`
 
     Args:
         thetas (Tensor): Batch of :math:`{\rm SU}(2)` eigenangles
@@ -36,13 +36,13 @@ def canonicalize_su3(thetas: torch.Tensor) -> torch.Tensor:
     Canonicalizes a set of :math:`{\rm SU}(3)` eigenangles `thetas`.
 
     Given eigenangles :math:`(\theta_1, theta_2, \theta_3)`, the algorithm for
-    canonicalization is
+    canonicalization is:
 
-        1.) Project onto hyperplane defined by :math:`\sum_i \theta_i = 0`
-        2.) Map into coordinates :math:`(a, b, c)`
-        3.) Wrap onto canonical hexagon centered at the identity
-        4.) Impose hexagonal constraints by wrapping into [-0.5, 0.5]
-        5.) Round and shift into the centered hexagon
+    1. Project onto hyperplane defined by :math:`\sum_i \theta_i = 0`
+    2. Map into coordinates :math:`(a, b, c)`
+    3. Wrap onto canonical hexagon centered at the identity
+    4. Impose hexagonal constraints by wrapping into [-0.5, 0.5]
+    5. Round and shift into the centered hexagon
 
     Args:
         thetas (Tensor): Batch of :math:`{\rm SU}(3)` eigenangles

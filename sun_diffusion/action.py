@@ -70,7 +70,9 @@ class SUNToyPolynomialAction(Action):
     r"""
     Toy polynomial action over a single :math:`{\rm SU}(N)` matrix.
 
-    The action is defined as in Eqn. (18) of [`2008.05456`]:
+    The action is defined as in Eqn. (18) of 2008.05456_.
+
+    .. _2008.05456: https://arxiv.org/abs/2008.05456
 
     .. math::
 

@@ -10,6 +10,7 @@ import numpy as np
 import itertools
 
 from torch import Tensor
+from numpy.typing import NDArray
 
 from .utils import grab, logsumexp_signed
 from .canon import canonicalize_sun
@@ -115,8 +116,9 @@ def sun_hk(
     r"""
     Evaluates the :math:`{\rm SU}(N)` heat kernel on wrapped eigenangles.
 
-    .. note:: This function assumes the input only includes the :math:`N-1`
-    independent eigenangles.
+    .. note::
+        This function assumes the input only includes the :math:`N-1`
+        independent eigenangles.
 
     Args:
         thetas (Tensor): Wrapped eigenangles, shaped `[B, Nc-1]`
@@ -141,8 +143,9 @@ def sun_dual_hk(
     Evaluates the :math:`{\rm SU}(N)` dual heat kernel over wrapped eigenangles
     as a character expansion.
 
-    .. note:: This function assumes the input only includes the :math:`N-1`
-    independent eigenangles.    
+    .. note::
+        This function assumes the input only includes the :math:`N-1`
+        independent eigenangles.    
 
     Args:
         thetas (Tensor): Wrapped eigenangles, shaped `[B, Nc-1]`
@@ -211,8 +214,9 @@ def sun_score_hk(thetas: Tensor, *, width: Tensor, n_max: int = 3) -> Tensor:
     Computes the analytical score function for the wrapped :math:`{\rm SU}(N)`
     heat kernel over eigenangles `thetas`.
 
-    .. note:: This function assumes the input only includes the :math:`N-1` 
-    independent eigenangles.
+    .. note::
+        This function assumes the input only includes the :math:`N-1`
+        independent eigenangles.
 
     Args:
         thetas (Tensor): Wrapped eigenangles, shaped `[B, Nc-1]`
@@ -245,8 +249,9 @@ def sun_score_dual_hk(
     Computes the analytical score function for the dual :math:`{\rm SU}(N)`
     heat kernel over eigenangles `thetas`.
 
-     .. note:: This function assumes the input only includes the :math:`N-1` 
-    independent eigenangles.
+     .. note::
+         This function assumes the input only includes the :math:`N-1`
+         independent eigenangles.
 
     Args:
         thetas (Tensor): Wrapped eigenangles, shaped `[B, Nc-1]`
@@ -379,19 +384,19 @@ def sample_sun_hk(
     width: Tensor,
     n_iter: int = 3,
     n_max: int = 3
-):
+) -> NDArray[np.float64]:
     r"""
     Samples from the :math:`{\rm SU}(N)` heat kernel with importance sampling.
 
     Args:
         batch_size (int): Number of samples to generate
-        Nc (int): Dimension of fundamental rep. of SU(Nc)
-        width (float) Standard deviation of heat kernel
-        n_iter (int): Number of IS iterations. Default: 3
+        Nc (int): Dimension of fundamental rep. of :math:`{\rm SU}(N)`
+        width (float) Standard deviation of the heat kernel
+        n_iter (int): Number of sampling iterations. Default: 3
         n_max (int): Max number of pre-image sum terms to include. Default: 3
 
     Returns:
-        xs: Batch of eigenangles shaped `[B, Nc]` from the heat kernel
+        xs (NDArray): Batch of eigenangles (`[B, Nc]`) from the heat kernel
     """
     def propose():
         """Samples proposal eigenangles from patched measure."""

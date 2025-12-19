@@ -1,4 +1,4 @@
-""""Utilities for handling the irreducible representations of SU(N)."""
+"""Utilities for handling the irreducible representations of SU(N)."""
 import torch
 import numpy as np
 import itertools
