@@ -31,7 +31,7 @@ __all__ = [
 # Set device for tests
 if __name__ == '__main__':
     from .devices import set_device, summary
-    set_device('cpu')  # TODO: test group_to_coeffs failing on cuda
+    set_device('cpu')
     print(summary())
 
 

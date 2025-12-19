@@ -54,7 +54,7 @@ def pauli(i: int) -> torch.Tensor:
 
 
 def _test_su2_gens():
-    print('[Testing SU(2) generators]')
+    print('[Testing SU(2) generators...]')
     for i in range(4):
         pauli_i = pauli(i)
         print(f'Pauli {i}:\n', pauli_i)
