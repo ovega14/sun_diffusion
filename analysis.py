@@ -210,7 +210,7 @@ def bootstrap_gen(
     *samples: NDArray[np.generic], 
     Nboot: int, 
     seed: Optional[int] = None
-) -> Iterable[tuple[NDArray[np.generic]], ...]:
+) -> Iterable[tuple[NDArray[np.generic], ...]]:
     """
     Bootstrap resampling generator.
 
