@@ -31,3 +31,24 @@ else:
 
 print(summary())
 ```
+
+## Quickstart / Examples
+This package allows one to define actions and evaluate them on batches of ${\rm SU}(N)$ configurations:
+```python
+from sun_diffusion.action import SUNToyAction
+from sun_diffusion.sun import random_sun_element
+
+# Create a toy action
+action = SUNToyAction(beta=1.0)
+
+# Random batch of SU(3) matrices
+batch_size = 4
+U = random_sun_element(batch_size, Nc=3)
+
+# Evaluate the action
+S = action(U)
+print(S)
+```
+```python-repl
+>>> tensor([-0.0338, -0.0705, -0.5711, -0.7625])
+```
