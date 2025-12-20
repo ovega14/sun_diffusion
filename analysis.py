@@ -269,16 +269,25 @@ def bootstrap(
 
 # TODO: Replace with np.cov? Only difference is that covar_from_boots allows
 # higher-order shapes, but this is probably not useful.
-def covar_from_boots(boots):
+def covar_from_boots(
+    boots: Iterable[NDArray[np.generic]]
+) -> NDArray[np.float64]:
+    """Computes the sample covariance matrix of a set of bootstrap copies."""
     boots = np.array(boots)
     Nboot = boots.shape[0]
     means = np.mean(boots, axis=0, keepdims=True)
     deltas = boots - means
-    return np.tensordot(deltas, deltas, axes=(0,0)) / (Nboot-1)
+    return np.tensordot(deltas, deltas, axes=(0,0)) / (Nboot - 1)
 
 
-def shrink_covar(covar, *, lam):
-    assert len(covar.shape) == 2 and covar.shape[0] == covar.shape[1]
+def shrink_covar(
+    covar: NDArray[np.float64], 
+    *, 
+    lam: float
+) -> NDArray[np.float64]:
+    """Applies linear shrinkage to a covariance matrix."""
+    assert len(covar.shape) == 2 and covar.shape[0] == covar.shape[1],
+        'covar must be a square 2D matrix'
     diag_covar = np.diag(covar) * np.identity(covar.shape[0])
     return (1-lam) * covar + lam * diag_covar
 
