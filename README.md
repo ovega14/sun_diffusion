@@ -43,9 +43,10 @@ print(summary())
 >>> CUDA available: True
 >>> Using device: cuda:0 (NVIDIA GH200 120GB) with dtype: torch.float32
 ```
+Further utilities for handling devices and dtypes can be found in the ['sun_diffusion.devices'](https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/devices.py) module.
 
 ## Quickstart / Examples
-**Note:** More in-depth examples can be found in the [`notebooks` folder](https://github.com/ovega14/sun_diffusion/blob/main/notebooks/) of this repository.
+**Note:** More in-depth examples can be found in the [`notebooks`](https://github.com/ovega14/sun_diffusion/blob/main/notebooks/) of this repository.
 
 This package allows one to define actions and evaluate them on batches of ${\rm SU}(N)$ configurations:
 ```python
@@ -66,7 +67,7 @@ print(S)
 ```python-repl
 >>> tensor([-0.0338, -0.0705, -0.5711, -0.7625])
 ```
-See the [`sun_diffusion.action` module](https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/action.py) for more details.
+See the [`sun_diffusion.action`](https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/action.py) module for more details.
 
 This package also enables users to define diffusion processes on Euclidean space:
 ```python
@@ -97,7 +98,7 @@ U_0 = random_sun_element(batch_size, Nc=2, scale=0.1)
 diffuser = PowerDiffusionSUN(kappa=3.0, alpha=1.0)
 U_1, xs, V = diffuser(U_0, torch.ones(batch_size))
 ```
-See ['sun_diffusion.diffusion'](https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/diffusion.py) for more diffusion processes and implementation details.
+See [`sun_diffusion.diffusion`](https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/diffusion.py) for more diffusion processes and implementation details.
 
 Sampling from the ${\rm SU}(N)$ heat kernel over the diagonal subalgebra of eigenangles is also simple, and can easily be combined with this package's matrix algebra utilities to produce group elements:
 ```python
