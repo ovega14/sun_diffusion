@@ -129,5 +129,22 @@ print(U)
 See the [`sun_diffusion.heat`](https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/heat.py), [`sun_diffusion.linalg`](https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/linalg.py) and [`sun_diffusion.sun`](https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/sun.py) modules for more.
  
 ## Conventions
-Some notes on mathematical conventions (which can definitely be changed):
-- The exponential map $\exp: \mathfrak{su}(N) \to {\rm SU}(N)$ is defined conventionally as $$U := \exp(iA)$$, where $A = A^\dagger$ is a hermitian matrix. In the math literature, one absorbs the factor of $i$ into the algebra-valued matrix $A$ and calls this an anti-hermitian matrix, but the physics convention makes explicit the imaginary unit in $\exp$. We adopt this convention automatically, so our functions that map between group and algebra, namely `sun.matrix_exp()` and `sun.matrix_log()`, expect a Hermitian matrix to be input.
+Some notes on mathematical conventions and notation:
+
+#### Exponential Map
+In physics, the exponential map $\exp: \mathfrak{su}(N) \to {\rm SU}(N)$ is defined conventionally through 
+
+$$U = \exp(A) := e^{iA}$$ 
+
+where $A = A^\dagger$ is a *Hermitian* matrix. In the math literature, one absorbs the factor of $i$ into the matrix so that $A$ is *anti-Hermitian*. We adopt the **physicist's** convention, so our functions that map between group and algebra, namely `sun.matrix_exp()` and `sun.matrix_log()`, expect a Hermitian matrix as input/output, respectively.
+
+#### Heat Equation
+In mathematics, the Heat equation is often written simply as 
+
+$$\partial_t p_t(U) = \Delta p_t(U)$$
+
+where $\Delta$ is the Laplace-Beltrami operator on the manifold $\mathcal{M} \ni U$. But to define more expressive diffusion processes, one introduces a time-dependent diffusion-coefficient, denoted $g_t$, such that
+
+$$\partial_t p(U) = \frac{g_t^2}{2}\Delta p_t(U).$$
+
+The factor of 1/2 originates from not inserting a factor of $\sqrt{2}$ in the SDE that defines the diffusion process, which we adopt as well.
