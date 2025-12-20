@@ -1,3 +1,3 @@
 #!/usr/bin/env bash
 
-python -m src
+python -m sun_diffusion
