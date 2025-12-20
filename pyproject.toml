@@ -34,6 +34,12 @@ notebooks = [
     "tqdm>=4.65,<5.0",
     "ipywidgets==7.7.2"
 ]
+docs = [
+   "sphinx>=7.0",
+   "furo",
+   "myst-parser",
+   "sphinx-autodoc-typehints"
+]
 
 [project.urls]
 Repository = "https://github.com/ovega14/sun_diffusion"
