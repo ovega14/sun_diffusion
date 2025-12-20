@@ -37,6 +37,8 @@ extensions = [
 autosummary_generate = True
 napoleon_numpy_docstring = False
 napoleon_google_docstring = True
+#napoleon_custom_sections = [('Returns', 'params_style')]
+
 
 autodoc_default_options = {
     'members': True,
