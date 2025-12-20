@@ -35,7 +35,7 @@ def canonicalize_su3(thetas: torch.Tensor) -> torch.Tensor:
     r"""
     Canonicalizes a set of :math:`{\rm SU}(3)` eigenangles `thetas`.
 
-    Given eigenangles :math:`(\theta_1, theta_2, \theta_3)`, the algorithm for
+    Given eigenangles :math:`(\theta_1, \theta_2, \theta_3)`, the algorithm for
     canonicalization is:
 
     1. Project onto hyperplane defined by :math:`\sum_i \theta_i = 0`
