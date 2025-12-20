@@ -292,7 +292,28 @@ def shrink_covar(
     return (1-lam) * covar + lam * diag_covar
 
 
-def bin_data(x, *, binsize, silent_trunc=True):
+def bin_data(
+    x: NDArray[np.float64 | np.complex128], 
+    *, 
+    binsize: int, 
+    silent_trunc: bool = True
+) -> tuple[
+    NDArray[np.int64], 
+    NDArray[np.float64 | np.complex128]
+]:
+    """
+    Bins data into consecutive blocks of size `binsize` along axis 0.
+
+    Args:
+        x (NDArray): Raw input data to be binned
+        binsize (int): Width of the bins
+        silent_trunc (bool): Whether to ignore divisibility of the length of
+            `x` by the binsize. Default: `True`
+
+    Returns:
+        ts (NDArray): Bin start indices
+        x_binned (NDArray): Data averaged within each bin
+    """
     x = np.array(x)
     if silent_trunc:
         x = x[:(x.shape[0] - x.shape[0]%binsize)]
@@ -300,12 +321,31 @@ def bin_data(x, *, binsize, silent_trunc=True):
         assert x.shape[0] % binsize == 0
     ts = np.arange(0, x.shape[0], binsize) # left endpoints of bins
     x = np.reshape(x, (-1, binsize) + x.shape[1:])
-    return ts, np.mean(x, axis=1)
+    xs_binned = np.mean(x, axis=1)
+    return ts, xs_binned
 
 
-# Autocorrelations
-def compute_autocorr(Os, *, tmax, vacsub=True):
-    assert np.allclose(np.imag(Os), 0.0)
+# =============================================================================
+#  Autocorrelations
+# =============================================================================
+def compute_autocorr(
+    Os: NDArray[np.float64],
+    *,
+    tmax: float,
+    vacsub: bool = True
+) -> NDArray[np.float64]:
+    """
+    Computes the normalized autocorrelation function on time-series data.
+
+    Args:
+        Os (NDArray): Real-valued time-series data
+        tmax (float): Max time horizon over which to compute autocorrelation
+        vacsub (bool): Whether to subtract the mean. Default: `True`
+
+    Returns:
+        rho (NDArray): Normalized autocorrelation of `Os`
+    """
+    assert np.allclose(np.imag(Os), 0.0), 'Os must be real'
     if vacsub:
         dOs = Os - np.mean(Os)
     else:
@@ -316,16 +356,39 @@ def compute_autocorr(Os, *, tmax, vacsub=True):
     return rho
 
 
-def compute_tint(Os, *, tmax, vacsub=True):
+def compute_tint(
+    Os: NDArray[np.float64],
+    *,
+    tmax: float,
+    vacsub: bool = True
+) -> NDArray[np.float64]:
+    """Computes the integrated autocorrelation time. See `compute_autocorr`."""
     rho = compute_autocorr(Os, tmax=tmax, vacsub=vacsub)
     tint = 0.5 + np.cumsum(rho[1:])
     return tint
 
 
-def self_consistent_tint(tints, *, W=4):
+def self_consistent_tint(
+    tints: NDArray[np.float64],
+    *,
+    W: float = 4
+) -> float:
+    """
+    Computes a self-consistent integrated autocorrelation time (IAT) cutoff.
+
+    This implements the standard windowing procedure:
+        - Find the first index `i` where `tints[i] < i / W`.
+        - If no such index exists, returns the last IAT value.
+
+    Args:
+        tints (NDArray): Array of integrated autocorrelation times at each lag
+        W (float): Safety factor for the self-consistency window. Default: `4`
+
+    Returns:
+        Self-consistent integrated autocorrelation time.
+    """
     after_W_tint = tints < np.arange(len(tints)) / W
     if not np.any(after_W_tint):
-        # print('WARNING: self-consistent tint condition never satisfied, returning last tint')
         return tints[-1]
     i = np.argmax(after_W_tint)
     return tints[i]
