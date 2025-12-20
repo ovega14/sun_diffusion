@@ -43,7 +43,7 @@ print(summary())
 >>> CUDA available: True
 >>> Using device: cuda:0 (NVIDIA GH200 120GB) with dtype: torch.float32
 ```
-Further utilities for handling devices and dtypes can be found in the ['sun_diffusion.devices'](https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/devices.py) module.
+Further utilities for handling devices and dtypes can be found in the [`sun_diffusion.devices`](https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/devices.py) module.
 
 ## Quickstart / Examples
 **Note:** More in-depth examples can be found in the [`notebooks`](https://github.com/ovega14/sun_diffusion/blob/main/notebooks/) of this repository.
