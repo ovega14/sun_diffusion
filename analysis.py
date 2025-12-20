@@ -286,7 +286,7 @@ def shrink_covar(
     lam: float
 ) -> NDArray[np.float64]:
     """Applies linear shrinkage to a covariance matrix."""
-    assert len(covar.shape) == 2 and covar.shape[0] == covar.shape[1],
+    assert len(covar.shape) == 2 and covar.shape[0] == covar.shape[1], \
         'covar must be a square 2D matrix'
     diag_covar = np.diag(covar) * np.identity(covar.shape[0])
     return (1-lam) * covar + lam * diag_covar
