@@ -52,3 +52,34 @@ print(S)
 ```python-repl
 >>> tensor([-0.0338, -0.0705, -0.5711, -0.7625])
 ```
+See the [`sun_diffusion.action` module](https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/action.py) for more details.
+
+This package also enables users to define diffusion processes on Euclidean space:
+```python
+import torch
+from sun_diffusion.diffusion import VarianceExpandingDiffusion
+
+batch_size = 512
+x_0 = 0.1 * torch.randn((batch_size, 3))
+
+# Diffuse x_0 -> x_1 on R^3
+euclidean_diffuser = VarianceExpandingDiffusion(kappa=1.1)
+x_1 = euclidean_diffuser(x_0, t=torch.ones(batch_size))
+print('x_0 std =', x_0.std().item())
+print('x_1 std =', x_1.std().item())
+```
+```python-repl
+x_0 std = 0.10194464772939682
+x_1 std = 1.0630394220352173
+```
+as well as on the ${\rm SU}(N)$ manifold:
+```python
+from sun_diffusion.diffusion import PowerDiffusionSUN
+
+batch_size = 512
+U_0 = random_sun_element(batch_size, Nc=2, scale=0.1)
+
+# Diffuse from U_0 -> U_1 on SU(2)
+diffuser = PowerDiffusionSUN(kappa=3.0, alpha=1.0)
+U_1, xs, V = diffuser(U_0, torch.ones(batch_size))
+```
