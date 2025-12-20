@@ -36,12 +36,12 @@ if __name__ == '__main__':
 
 
 def matrix_exp(A: torch.Tensor) -> torch.Tensor:
-    """Applies the complex exponential map to a matrix `A`."""
+    """Applies the complex exponential map to a Hermitian matrix `A`."""
     return torch.matrix_exp(1j * A)
 
 
 def matrix_log(U: torch.Tensor) -> torch.Tensor:
-    """Computes the matrix logarithm on an input matrix `U`."""
+    """Computes the matrix logarithm on a special unitary matrix `U`."""
     D, V = torch.linalg.eig(U)
     logD = torch.diag_embed(torch.log(D))
     return -1j * (V @ logD @ adjoint(V))
