@@ -1,4 +1,6 @@
 # sun_diffusion
+[![arXiv](https://img.shields.io/badge/arXiv-2512.xxxxx-b31b1b.svg)](https://arxiv.org/abs/2512.xxxxx)
+
 Diffusion models for ${\rm SU}(N)$ degrees of freedom.
 
 What this package does:
