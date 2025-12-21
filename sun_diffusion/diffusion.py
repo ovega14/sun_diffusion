@@ -24,8 +24,7 @@ class DiffusionProcess(torch.nn.Module, ABC):
 
     #@abstractmethod
     def denoise(self, x_1):
-        # TODO
-        # For now: keep samplers / O(S)DEsolve in the frontend
+        # OV: For now, keep sampling / ODEsolve in the frontend
         raise NotImplementedError()
 
     def forward(self, x_0, t):
