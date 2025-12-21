@@ -50,6 +50,7 @@ Further utilities for handling devices and dtypes can be found in the [`sun_diff
 ## Quickstart / Examples
 **Note:** More in-depth examples can be found in the [`notebooks`](https://github.com/ovega14/sun_diffusion/blob/main/notebooks/) of this repository.
 
+#### Physics Actions
 This package allows one to define actions and evaluate them on batches of ${\rm SU}(N)$ configurations:
 ```python
 from sun_diffusion.action import SUNToyAction
@@ -71,6 +72,7 @@ print(S)
 ```
 See the [`sun_diffusion.action`](https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/action.py) module for more details.
 
+#### Diffusion Processes
 This package also enables users to define diffusion processes on Euclidean space:
 ```python
 import torch
@@ -102,6 +104,7 @@ U_1, xs, V = diffuser(U_0, torch.ones(batch_size))
 ```
 See [`sun_diffusion.diffusion`](https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/diffusion.py) for more diffusion processes and implementation details.
 
+#### Heat Kernel and Group Algebra
 Sampling from the ${\rm SU}(N)$ heat kernel over the diagonal subalgebra of eigenangles is also simple, and can easily be combined with this package's matrix algebra utilities to produce group elements:
 ```python
 from sun_diffusion.heat import sample_sun_hk
