@@ -41,7 +41,7 @@ class VarianceExpandingDiffusion(DiffusionProcess):
     r"""
     Variance-expading diffusion process.
 
-    Noise schedule is given by :math:`g(t) = \sigma^t`, which yields a
+    Noise schedule is given by :math:`g(t) = \kappa^t`, which yields a
     diffusivity of
 
     .. math::

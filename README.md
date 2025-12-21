@@ -41,7 +41,7 @@ else:
     set_device('cpu')
 print(summary())
 ```
-```python-repl
+```pycon
 >>> CUDA available: True
 >>> Using device: cuda:0 (NVIDIA GH200 120GB) with dtype: torch.float32
 ```
@@ -66,7 +66,7 @@ U = random_sun_element(batch_size, Nc=3)
 S = action(U)
 print(S)
 ```
-```python-repl
+```pycon
 >>> tensor([-0.0338, -0.0705, -0.5711, -0.7625])
 ```
 See the [`sun_diffusion.action`](https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/action.py) module for more details.
@@ -85,7 +85,7 @@ x_1 = diffuser(x_0, t=torch.ones(batch_size))
 print('x_0 std =', x_0.std().item())
 print('x_1 std =', x_1.std().item())
 ```
-```python-repl
+```pycon
 >>> x_0 std = 0.10194464772939682
 >>> x_1 std = 1.0630394220352173
 ```
@@ -119,7 +119,7 @@ V = random_un_haar_element(batch_size, Nc=Nc)
 U = V @ matrix_exp(X) @ adjoint(V)
 print(U)
 ```
-```python-repl
+```pycon
 >>> tensor([[[ 0.8995-0.3124j,  0.0070+0.3055j],
          [-0.0070+0.3055j,  0.8995+0.3124j]],
 
