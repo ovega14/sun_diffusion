@@ -150,7 +150,17 @@ def compute_kl_div(logp, logq):
 
 
 def compute_ess(logp, logq):
-    """Computes the effective sample size from target and model likelihoods."""
+    r"""
+    Computes the effective sample size from target and model likelihoods.
+
+    The ESS is given by
+
+    .. math::
+
+        {\rm ESS} = \frac{\mathbb{E}[w_i]^2}{\mathbb{E}[w_i^2]} \in [0,1]
+
+    where :math:`w_i = \exp(\log{p}_i - \log{q}_i)`.
+    """
     logw = logp - logq
     log_ess = 2 * logsumexp(logw) - logsumexp(2 * logw)
     return math.exp(log_ess) / len(logw)

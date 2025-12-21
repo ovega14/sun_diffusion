@@ -17,7 +17,7 @@ def canonicalize_su2(thetas: torch.Tensor) -> torch.Tensor:
     Canonicalizes a set of :math:`{\rm SU}(2)` eigenangles 
     :math:`(\theta_1, \theta_2)` by:
 
-    1. Set :math:`\theta_1 = {\rm wrap}(|\theta|)`
+    1. Set :math:`\theta_1 = |{\rm wrap}(\theta)|`
     2. Set :math:`\theta_2 = -\theta_1`
 
     Args:

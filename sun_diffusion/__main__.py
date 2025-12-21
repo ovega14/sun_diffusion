@@ -14,6 +14,10 @@ def run_submodule(name: str) -> None:
 
 
 run_submodule('action')
+run_submodule('analysis')
+run_submodule('canon')
+run_submodule('devices')
+run_submodule('diffusion')
 run_submodule('gens')
 run_submodule('heat')
 run_submodule('irreps')

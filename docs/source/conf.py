@@ -34,6 +34,10 @@ extensions = [
     'sphinx_copybutton',
 ]
 
+myst_enable_extensions = [
+    'dollarmath'
+]
+
 autosummary_generate = True
 napoleon_numpy_docstring = False
 napoleon_google_docstring = True

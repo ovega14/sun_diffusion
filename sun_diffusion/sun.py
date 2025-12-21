@@ -89,8 +89,9 @@ def random_sun_element(
     scale: float = 1.0
 ) -> torch.Tensor:
     r"""
-    Creates a batch of random :math:`{\rm SU}(N)` matrices whose elements are
-    randomly sampled from a standard normal distribution.
+    Samples a batch of :math:`{\rm SU}(N)` matrices that are the exponential of
+    :math:`\mathfrak{su}(N)` elements randomly drawn from a standard normal
+    distribution.
 
     Args:
         batch_size (int): Number of matrices to generate
@@ -357,9 +358,7 @@ def mat_angle(
         U (Tensor): Input matrix to decompose
 
     Returns:
-        thetas (Tensor): Eigengangles of `U`
-        V (Tensor): Matrix of eigenvectors of `U`
-        Vinv (Tensor): Inverse matrix of eigenvectors of `U`
+        Tuple of (eigengangles, matrix of eigenvectors, inverse eigenvector matrix)
     """
     eigs, V = torch.linalg.eig(U)
     Vinv = torch.linalg.inv(V)
