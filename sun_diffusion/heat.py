@@ -96,6 +96,9 @@ def log_sun_hk(
     shifts = itertools.product(range(-n_max, n_max+1), repeat=thetas.shape[-1])
     for ns in shifts:
         ns = torch.tensor(ns)
+        # keep the sum over pre-images symmetric
+        if torch.sum(ns).abs() > n_max:
+            continue
         xs = thetas + 2*np.pi * ns
         log_value, sign = _log_sun_hk_unwrapped(xs, width=width, eig_meas=eig_meas)
         log_values.append(log_value)
@@ -226,13 +229,17 @@ def sun_score_hk(thetas: Tensor, *, width: Tensor, n_max: int = 3) -> Tensor:
     Returns:
         Analytical gradient of the wrapped log HK
     """
-    shifts = itertools.product(range(-n_max, n_max+1), repeat=thetas.shape[-1])
     logK = log_sun_hk(thetas, width=width, eig_meas=False)
     
     # Sum over pre-images
     total = 0
+    shifts = itertools.product(range(-n_max, n_max+1), repeat=thetas.shape[-1])
     for ns in shifts:
-        xs = thetas + 2*np.pi * torch.tensor(ns)
+        # keep the sum over pre-images symmetric
+        ns = torch.tensor(ns)
+        if torch.sum(ns).abs() > n_max:
+            continue
+        xs = thetas + 2*np.pi * ns
         logKi, si = _log_sun_hk_unwrapped(xs, width=width, eig_meas=False)
         exp_factor = (si * torch.exp(logKi - logK))[..., None]
         total = total + exp_factor * _sun_score_hk_unwrapped(xs, width=width)
