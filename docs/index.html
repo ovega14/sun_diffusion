@@ -173,7 +173,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
         <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
       </label>
     </div>
@@ -240,13 +240,187 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
             <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
           </label>
         </div>
         <article role="main" id="furo-main-content">
           <section id="documentation">
 <h1>Documentation<a class="headerlink" href="#documentation" title="Link to this heading">¶</a></h1>
+<section class="tex2jax_ignore mathjax_ignore" id="sun-diffusion">
+<h2>sun_diffusion<a class="headerlink" href="#sun-diffusion" title="Link to this heading">¶</a></h2>
+<p><a class="reference external" href="https://arxiv.org/abs/2512.xxxxx"><img alt="arXiv" src="https://img.shields.io/badge/arXiv-2512.xxxxx-b31b1b.svg" /></a></p>
+<p>Diffusion models for <span class="math notranslate nohighlight">\({\rm SU}(N)\)</span> degrees of freedom.</p>
+<p>What this package does:</p>
+<ul class="simple">
+<li><p>Implements diffusion processes on the <span class="math notranslate nohighlight">\({\rm SU}(N)\)</span> Lie group manifold with</p>
+<ul>
+<li><p>different noise schedules</p></li>
+<li><p>customizable parameters</p></li>
+</ul>
+</li>
+<li><p>Includes utilities for manipulating matrices (and their spectra) on <span class="math notranslate nohighlight">\({\rm SU}(N)\)</span> and <span class="math notranslate nohighlight">\(\mathfrak{su}(N)\)</span>, including</p>
+<ul>
+<li><p>diagonalization</p></li>
+<li><p>canonicalization</p></li>
+<li><p>eigendecomposition</p></li>
+<li><p>algebra-to-group projections (and vice versa)</p></li>
+<li><p>irreducible representations</p></li>
+</ul>
+</li>
+<li><p>Provides heat kernel evaluations, sampling routines, and score functions</p></li>
+</ul>
+<section id="installation">
+<h3>Installation<a class="headerlink" href="#installation" title="Link to this heading">¶</a></h3>
+<section id="cpu-only-default">
+<h4>CPU only (default)<a class="headerlink" href="#cpu-only-default" title="Link to this heading">¶</a></h4>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>sun_diffusion
+</pre></div>
+</div>
+</section>
+<section id="gpu-cuda-users">
+<h4>GPU (CUDA) Users<a class="headerlink" href="#gpu-cuda-users" title="Link to this heading">¶</a></h4>
+<p>Before installing, make sure to install a CUDA-enabled PyTorch compatible with your GPU.
+For example, for CUDA 12.4:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>torch<span class="w"> </span>--index-url<span class="w"> </span>https://download.pytorch.org/whl/cu124
+pip<span class="w"> </span>install<span class="w"> </span>sun_diffusion<span class="o">[</span>gpu<span class="o">]</span>
+</pre></div>
+</div>
+<p>If PyTorch cannot detect a GPU, your code will fall back to CPU, or <code class="docutils literal notranslate"><span class="pre">set_device('cuda')</span></code> will raise an error. You can verify CUDA availability with a small example:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">sun_diffusion.devices</span><span class="w"> </span><span class="kn">import</span> <span class="n">set_device</span><span class="p">,</span> <span class="n">summary</span><span class="p">,</span> <span class="n">HAS_CUDA</span>
+
+<span class="c1"># Check CUDA availability</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;CUDA available:&#39;</span><span class="p">,</span> <span class="n">HAS_CUDA</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">HAS_CUDA</span><span class="p">:</span>
+    <span class="n">set_device</span><span class="p">(</span><span class="s1">&#39;cuda&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="n">set_device</span><span class="p">(</span><span class="s1">&#39;cpu&#39;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">summary</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">CUDA</span> <span class="n">available</span><span class="p">:</span> <span class="kc">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Using</span> <span class="n">device</span><span class="p">:</span> <span class="n">cuda</span><span class="p">:</span><span class="mi">0</span> <span class="p">(</span><span class="n">NVIDIA</span> <span class="n">GH200</span> <span class="mi">120</span><span class="n">GB</span><span class="p">)</span> <span class="k">with</span> <span class="n">dtype</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">float32</span>
+</pre></div>
+</div>
+<p>Further utilities for handling devices and dtypes can be found in the <a class="reference external" href="https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/devices.py"><code class="docutils literal notranslate"><span class="pre">sun_diffusion.devices</span></code></a> module.</p>
+</section>
+</section>
+<section id="quickstart-examples">
+<h3>Quickstart / Examples<a class="headerlink" href="#quickstart-examples" title="Link to this heading">¶</a></h3>
+<p><strong>Note:</strong> More in-depth examples can be found in the <a class="reference external" href="https://github.com/ovega14/sun_diffusion/blob/main/notebooks/"><code class="docutils literal notranslate"><span class="pre">notebooks</span></code></a> of this repository.</p>
+<section id="physics-actions">
+<h4>Physics Actions<a class="headerlink" href="#physics-actions" title="Link to this heading">¶</a></h4>
+<p>This package allows one to define actions and evaluate them on batches of <span class="math notranslate nohighlight">\({\rm SU}(N)\)</span> configurations:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">sun_diffusion.action</span><span class="w"> </span><span class="kn">import</span> <span class="n">SUNToyAction</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sun_diffusion.sun</span><span class="w"> </span><span class="kn">import</span> <span class="n">random_sun_element</span>
+
+<span class="c1"># Create a toy action</span>
+<span class="n">action</span> <span class="o">=</span> <span class="n">SUNToyAction</span><span class="p">(</span><span class="n">beta</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+
+<span class="c1"># Random batch of SU(3) matrices</span>
+<span class="n">batch_size</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">U</span> <span class="o">=</span> <span class="n">random_sun_element</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">Nc</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+
+<span class="c1"># Evaluate the action</span>
+<span class="n">S</span> <span class="o">=</span> <span class="n">action</span><span class="p">(</span><span class="n">U</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">S</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tensor</span><span class="p">([</span><span class="o">-</span><span class="mf">0.0338</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.0705</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5711</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.7625</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>See the <a class="reference external" href="https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/action.py"><code class="docutils literal notranslate"><span class="pre">sun_diffusion.action</span></code></a> module for more details.</p>
+</section>
+<section id="diffusion-processes">
+<h4>Diffusion Processes<a class="headerlink" href="#diffusion-processes" title="Link to this heading">¶</a></h4>
+<p>This package also enables users to define diffusion processes on Euclidean space:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sun_diffusion.diffusion</span><span class="w"> </span><span class="kn">import</span> <span class="n">VarianceExpandingDiffusion</span>
+
+<span class="n">batch_size</span> <span class="o">=</span> <span class="mi">512</span>
+<span class="n">x_0</span> <span class="o">=</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">randn</span><span class="p">((</span><span class="n">batch_size</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+
+<span class="c1"># Diffuse x_0 -&gt; x_1 on R^3</span>
+<span class="n">diffuser</span> <span class="o">=</span> <span class="n">VarianceExpandingDiffusion</span><span class="p">(</span><span class="n">kappa</span><span class="o">=</span><span class="mf">1.1</span><span class="p">)</span>
+<span class="n">x_1</span> <span class="o">=</span> <span class="n">diffuser</span><span class="p">(</span><span class="n">x_0</span><span class="p">,</span> <span class="n">t</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">batch_size</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;x_0 std =&#39;</span><span class="p">,</span> <span class="n">x_0</span><span class="o">.</span><span class="n">std</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+<span class="nb">print</span><span class="p">(</span><span class="s1">&#39;x_1 std =&#39;</span><span class="p">,</span> <span class="n">x_1</span><span class="o">.</span><span class="n">std</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">())</span>
+</pre></div>
+</div>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">x_0</span> <span class="n">std</span> <span class="o">=</span> <span class="mf">0.10194464772939682</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">x_1</span> <span class="n">std</span> <span class="o">=</span> <span class="mf">1.0630394220352173</span>
+</pre></div>
+</div>
+<p>as well as on the <span class="math notranslate nohighlight">\({\rm SU}(N)\)</span> manifold:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">sun_diffusion.diffusion</span><span class="w"> </span><span class="kn">import</span> <span class="n">PowerDiffusionSUN</span>
+
+<span class="n">batch_size</span> <span class="o">=</span> <span class="mi">512</span>
+<span class="n">U_0</span> <span class="o">=</span> <span class="n">random_sun_element</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">Nc</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">scale</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+
+<span class="c1"># Diffuse U_0 -&gt; U_1 on SU(2)</span>
+<span class="n">diffuser</span> <span class="o">=</span> <span class="n">PowerDiffusionSUN</span><span class="p">(</span><span class="n">kappa</span><span class="o">=</span><span class="mf">3.0</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+<span class="n">U_1</span><span class="p">,</span> <span class="n">xs</span><span class="p">,</span> <span class="n">V</span> <span class="o">=</span> <span class="n">diffuser</span><span class="p">(</span><span class="n">U_0</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">batch_size</span><span class="p">))</span>
+</pre></div>
+</div>
+<p>See <a class="reference external" href="https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/diffusion.py"><code class="docutils literal notranslate"><span class="pre">sun_diffusion.diffusion</span></code></a> for more diffusion processes and implementation details.</p>
+</section>
+<section id="heat-kernel-and-group-algebra">
+<h4>Heat Kernel and Group Algebra<a class="headerlink" href="#heat-kernel-and-group-algebra" title="Link to this heading">¶</a></h4>
+<p>Sampling from the <span class="math notranslate nohighlight">\({\rm SU}(N)\)</span> heat kernel over the diagonal subalgebra of eigenangles is also simple, and can easily be combined with this package’s matrix algebra utilities to produce group elements:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">sun_diffusion.heat</span><span class="w"> </span><span class="kn">import</span> <span class="n">sample_sun_hk</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sun_diffusion.linalg</span><span class="w"> </span><span class="kn">import</span> <span class="n">adjoint</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sun_diffusion.sun</span><span class="w"> </span><span class="kn">import</span> <span class="n">random_un_haar_element</span><span class="p">,</span> <span class="n">embed_diag</span><span class="p">,</span> <span class="n">matrix_exp</span>
+
+<span class="c1"># Batch of HK eigenangles</span>
+<span class="n">batch_size</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">Nc</span> <span class="o">=</span> <span class="mi">2</span>
+<span class="n">xs</span> <span class="o">=</span> <span class="n">sample_sun_hk</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">Nc</span><span class="o">=</span><span class="n">Nc</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">rand</span><span class="p">(</span><span class="n">batch_size</span><span class="p">),</span> <span class="n">n_iter</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+
+<span class="c1"># Promote to Algebra -&gt; project to SU(N)</span>
+<span class="n">X</span> <span class="o">=</span> <span class="n">embed_diag</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">xs</span><span class="p">))</span>
+<span class="n">V</span> <span class="o">=</span> <span class="n">random_un_haar_element</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">Nc</span><span class="o">=</span><span class="n">Nc</span><span class="p">)</span>
+<span class="n">U</span> <span class="o">=</span> <span class="n">V</span> <span class="o">@</span> <span class="n">matrix_exp</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">@</span> <span class="n">adjoint</span><span class="p">(</span><span class="n">V</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">U</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="highlight-pycon notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">tensor</span><span class="p">([[[</span> <span class="mf">0.8995</span><span class="o">-</span><span class="mf">0.3124</span><span class="n">j</span><span class="p">,</span>  <span class="mf">0.0070</span><span class="o">+</span><span class="mf">0.3055</span><span class="n">j</span><span class="p">],</span>
+<span class="go">         [-0.0070+0.3055j,  0.8995+0.3124j]],</span>
+
+<span class="go">        [[ 0.9748+0.1920j,  0.0399+0.1061j],</span>
+<span class="go">         [-0.0399+0.1061j,  0.9748-0.1920j]]])</span>
+</pre></div>
+</div>
+<p>See the <a class="reference external" href="https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/heat.py"><code class="docutils literal notranslate"><span class="pre">sun_diffusion.heat</span></code></a>, <a class="reference external" href="https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/linalg.py"><code class="docutils literal notranslate"><span class="pre">sun_diffusion.linalg</span></code></a> and <a class="reference external" href="https://github.com/ovega14/sun_diffusion/blob/main/sun_diffusion/sun.py"><code class="docutils literal notranslate"><span class="pre">sun_diffusion.sun</span></code></a> modules for more.</p>
+</section>
+</section>
+<section id="conventions">
+<h3>Conventions<a class="headerlink" href="#conventions" title="Link to this heading">¶</a></h3>
+<p>Some notes on mathematical conventions and notation:</p>
+<section id="exponential-map">
+<h4>Exponential Map<a class="headerlink" href="#exponential-map" title="Link to this heading">¶</a></h4>
+<p>In physics, the exponential map <span class="math notranslate nohighlight">\(\exp: \mathfrak{su}(N) \to {\rm SU}(N)\)</span> is defined conventionally through</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[U = \exp(A) := e^{iA}\]</div>
+</div>
+<p>where <span class="math notranslate nohighlight">\(A = A^\dagger\)</span> is a <em>Hermitian</em> matrix. In the math literature, one absorbs the factor of <span class="math notranslate nohighlight">\(i\)</span> into the matrix so that <span class="math notranslate nohighlight">\(A\)</span> is <em>anti-Hermitian</em>. We adopt the <strong>physicist’s</strong> convention, so our functions that map between group and algebra, namely <code class="docutils literal notranslate"><span class="pre">sun.matrix_exp()</span></code> and <code class="docutils literal notranslate"><span class="pre">sun.matrix_log()</span></code>, expect a Hermitian matrix as input/output, respectively.</p>
+</section>
+<section id="heat-equation">
+<h4>Heat Equation<a class="headerlink" href="#heat-equation" title="Link to this heading">¶</a></h4>
+<p>In mathematics, the Heat equation is often written simply as</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\partial_t p_t(U) = \Delta p_t(U)\]</div>
+</div>
+<p>where <span class="math notranslate nohighlight">\(\Delta\)</span> is the Laplace-Beltrami operator on the manifold <span class="math notranslate nohighlight">\(\mathcal{M} \ni U\)</span>. But to define more expressive diffusion processes, one introduces a time-dependent diffusion-coefficient, denoted <span class="math notranslate nohighlight">\(g_t\)</span>, such that</p>
+<div class="math-wrapper docutils container">
+<div class="math notranslate nohighlight">
+\[\partial_t p(U) = \frac{g_t^2}{2}\Delta p_t(U).\]</div>
+</div>
+<p>The factor of 1/2 originates from not inserting a factor of <span class="math notranslate nohighlight">\(\sqrt{2}\)</span> in the SDE that defines the diffusion process, which we adopt as well.</p>
+</section>
+</section>
+</section>
 </section>
 <section id="api-reference">
 <h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading">¶</a></h1>
@@ -373,8 +547,46 @@
         
       </footer>
     </div>
-    <aside class="toc-drawer no-toc">
+    <aside class="toc-drawer">
       
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Documentation</a><ul>
+<li><a class="reference internal" href="#sun-diffusion">sun_diffusion</a><ul>
+<li><a class="reference internal" href="#installation">Installation</a><ul>
+<li><a class="reference internal" href="#cpu-only-default">CPU only (default)</a></li>
+<li><a class="reference internal" href="#gpu-cuda-users">GPU (CUDA) Users</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#quickstart-examples">Quickstart / Examples</a><ul>
+<li><a class="reference internal" href="#physics-actions">Physics Actions</a></li>
+<li><a class="reference internal" href="#diffusion-processes">Diffusion Processes</a></li>
+<li><a class="reference internal" href="#heat-kernel-and-group-algebra">Heat Kernel and Group Algebra</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#conventions">Conventions</a><ul>
+<li><a class="reference internal" href="#exponential-map">Exponential Map</a></li>
+<li><a class="reference internal" href="#heat-equation">Heat Equation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#api-reference">API Reference</a></li>
+</ul>
+
+          </div>
+        </div>
+      </div>
       
       
     </aside>
@@ -385,5 +597,7 @@
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>
     <script src="_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="_static/copybutton.js?v=f281be69"></script>
+    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     </body>
 </html>
