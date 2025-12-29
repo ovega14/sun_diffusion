@@ -14,7 +14,6 @@ date-released: 2025-12-23
 repository-code: "https://github.com/ovega14/sun_diffusion"
 url: "https://ovega14.github.io/sun_diffusion/"
 license: MIT
-commit: 5600b57
 preferred-citation:
   type: article
   authors:
