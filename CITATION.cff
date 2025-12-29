@@ -1,0 +1,30 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+authors:
+  - family-names: "Kanwar"
+    given-names: "Gurtej"
+    orcid: "https://orcid.org/0000-0002-4340-4983"
+  - family-names: "Vega"
+    given-names: "Octavio"
+    orcid: "https://orcid.org/0000-0002-4360-8126"
+title: "sun_diffusion"
+version: 0.1.0
+date-released: 2025-12-23
+repository-code: "https://github.com/ovega14/sun_diffusion"
+url: "https://ovega14.github.io/sun_diffusion/"
+license: MIT
+commit: 5600b57
+preferred-citation:
+  type: article
+  authors:
+    - family-names: "Kanwar"
+      given-names: "Gurtej"
+      orcid: "https://orcid.org/0000-0002-4340-4983"
+    - family-names: "Vega"
+      given-names: "Octavio"
+      orcid: "https://orcid.org/0000-0002-4360-8126"
+  title: "Spectral Diffusion for Sampling on SU(N)"
+  year: 2025
+  doi: "10.48550/arXiv.2512.19877"
+  url: "https://arxiv.org/abs/2512.19877"
