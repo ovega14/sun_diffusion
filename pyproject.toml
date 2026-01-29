@@ -45,3 +45,4 @@ docs = [
 [project.urls]
 Repository = "https://github.com/ovega14/sun_diffusion"
 Paper = "https://arxiv.org/abs/2512.19877"
+Documentation = "https://ovega14.github.io/sun_diffusion"
