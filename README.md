@@ -2,6 +2,7 @@
 [![arXiv](https://img.shields.io/badge/arXiv-2512.19877-b31b1b.svg)](https://arxiv.org/abs/2512.19877)
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://ovega14.github.io/sun_diffusion/)
 [![PyPI - Version](https://img.shields.io/pypi/v/sun_diffusion)](https://pypi.org/project/sun-diffusion/#description)
+[![DOI](https://zenodo.org/badge/1046560489.svg)](https://doi.org/10.5281/zenodo.18419882)
 
 Diffusion models for ${\rm SU}(N)$ degrees of freedom.
 
